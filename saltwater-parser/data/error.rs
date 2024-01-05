@@ -156,7 +156,7 @@ pub enum SemanticError {
     IllegalReturnType(Type),
 
     // TODO: print params in the error message
-    #[error("arrays cannot contain functions (got '{0}'). help: try storing array of pointer to function: (*{}[])(...)")]
+    #[error("arrays cannot contain functions (got '{0}'). help: try storing array of pointer to function: (*{0}[])(...)")]
     ArrayStoringFunction(Type),
 
     #[error("void must be the first and only parameter if specified")]
