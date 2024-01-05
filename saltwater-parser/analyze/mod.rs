@@ -1163,7 +1163,7 @@ struct FunctionData {
     /// the name of the function
     id: InternedStr,
     /// where the function was declared
-    location: Location,
+    // location: Location,
     /// the return type of the function
     return_type: Type,
 }
@@ -1206,7 +1206,7 @@ impl FunctionAnalyzer<'_> {
         };
         // used for figuring out what casts `return 1;` should make
         let tmp_metadata = FunctionData {
-            location,
+            // location,
             id: func.id,
             return_type: *func_type.return_type,
         };

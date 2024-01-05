@@ -50,7 +50,7 @@ pub struct Lexer {
     error_handler: ErrorHandler<LexError>,
     /// Whether or not to display each token as it is processed
     debug: bool,
-    given_newline_error: bool,
+    // given_newline_error: bool,
 }
 
 struct PseudoLexer<T: Iterator<Item = char>> {
@@ -79,7 +79,7 @@ impl Lexer {
     /// Creates a Lexer from a filename and the contents of a file
     pub fn new<S: Into<ArcStr>>(file: FileId, chars: S, debug: bool) -> Lexer {
         Lexer {
-            given_newline_error: false,
+            // given_newline_error: false,
             debug,
             location: SingleLocation { offset: 0, file },
             chars: chars.into(),

@@ -471,7 +471,6 @@ impl<B: Backend> Compiler<B> {
             self.compile_expr(rval, builder)?,
         );
         if let Type::Union(_) | Type::Struct(_) = ctype {
-            use std::convert::TryInto;
             let size = ctype.sizeof().map_err(|e| location.with(e.to_string()))?;
             let align = ctype
                 .alignof()

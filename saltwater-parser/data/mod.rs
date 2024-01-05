@@ -151,7 +151,6 @@ mod codegen_impls {
         }
         /// Return an IR type which can represent this C type
         pub fn as_ir_type(&self) -> IrType {
-            use std::convert::TryInto;
             use Type::*;
 
             match self {
