@@ -326,7 +326,10 @@ impl<'a> PreProcessor<'a> {
             TARGET.architecture, TARGET.operating_system, TARGET.environment
         );
 
-        let now = time::OffsetDateTime::try_now_local().unwrap();
+        let now = match time::OffsetDateTime::try_now_local() {
+            Ok(x) => x,
+            Err(_) => time::OffsetDateTime::now_utc(),
+        };
 
         #[allow(clippy::inconsistent_digit_grouping)]
         let mut definitions = map! {
