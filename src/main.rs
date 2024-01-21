@@ -1,3 +1,6 @@
+mod saltwater_parser;
+mod saltwater_codegen;
+
 use std::collections::VecDeque;
 use std::fs::File;
 use std::io::{self, Read};
@@ -10,9 +13,13 @@ use ansi_term::{ANSIString, Colour};
 use arcstr::ArcStr;
 use pico_args::Arguments;
 use saltwater_codegen::{assemble, compile, link};
-use saltwater_parser::data::{error::CompileWarning, Location};
-use saltwater_parser::{preprocess, Error, Files, Opt, Program};
+use saltwater_parser::{Opt, Files, CompileWarning};
+use crate::saltwater_parser::Location;
+// use saltwater_parser::data::{error::CompileWarning, Location};
+// use saltwater_parser::{preprocess, Error, Files, Opt, Program};
 use tempfile::NamedTempFile;
+
+use crate::saltwater_parser::{Error, Program, preprocess};
 
 static ERRORS: AtomicUsize = AtomicUsize::new(0);
 static WARNINGS: AtomicUsize = AtomicUsize::new(0);
@@ -600,7 +607,10 @@ fn install_panic_hook() {
 
 #[cfg(test)]
 mod test {
-    use super::{Files, Location};
+    use crate::saltwater_parser;
+    use super::saltwater_parser::Files;
+    use super::saltwater_parser::Location;
+
     use ansi_term::Style;
     use saltwater_parser::data::lex::Span;
 

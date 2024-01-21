@@ -8,8 +8,8 @@ extern crate log;
 extern crate tempfile;
 
 use log::info;
-use saltwater_codegen::{assemble, initialize_aot_module, link};
-use saltwater_parser::{Error, Opt};
+use saltwater::saltwater_codegen::{assemble, initialize_aot_module, link};
+use saltwater::saltwater_parser::{Error, Opt};
 
 pub fn init() {
     env_logger::builder().is_test(true).init();
@@ -51,7 +51,7 @@ pub fn compile(
         ..Default::default()
     };
     let module = initialize_aot_module(program.to_owned());
-    let module = saltwater_codegen::compile(module, program, opts)
+    let module = saltwater::saltwater_codegen::compile(module, program, opts)
         .result?
         .finish();
     let output = tempfile::NamedTempFile::new()

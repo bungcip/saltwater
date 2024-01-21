@@ -30,19 +30,35 @@ atty = { version = "0.2", default-features = false }
 git-testament = { version = "0.1", optional = true }
 rand = { version = "0.7", optional = true }
 rodio = { version = "0.11.0", optional = true }
-saltwater-parser = { path = "saltwater-parser", version = "0.11.0" }
-saltwater-codegen = { path = "saltwater-codegen", version = "0.11.0" }
+# saltwater-parser = { path = "saltwater-parser" }
+# saltwater-codegen = { path = "saltwater-codegen" }
+cranelift = "0.66"
+cranelift-module = "0.66"
+cranelift-object = "0.66"
+cranelift-simplejit = { version = "0.66" }
+target-lexicon = "0.10"
+lazy_static = "1"
+hexponent = "0.3"
+thiserror = "^1.0.10"
+lasso = "0.2"
+codespan = { version = ">=0.9.5", default-features = false }
+counter = "0.4"
+shared_str = "0.1.1"
+time = "0.2"
+cranelift-codegen = { version = "0.66" }
 
 [dev-dependencies]
 env_logger = { version = "0.7", default-features = false }
 log = "0.4"
 criterion = "0.3"
 walkdir = "2"
+proptest = "^0.9.6"
+proptest-derive = "0.1"
 
 [features]
 default = ["color-backtrace"]
 salty = ["rand", "rodio"]
-jit = ["saltwater-codegen/jit"]
+jit = []
 # for internal use
 _test_headers = []
 
@@ -61,9 +77,9 @@ required-features = ["jit"]
 # name = "parens"
 # harness = false
 
-[[test]]
-name = "jit"
-required-features = ["jit"]
+# [[test]]
+# name = "jit"
+# required-features = ["jit"]
 
 [[test]]
 name = "runner"
