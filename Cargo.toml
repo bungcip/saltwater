@@ -28,10 +28,6 @@ pico-args = { version = "0.5", features = ["short-space-opt"] }
 color-backtrace = { version = "0.5", default-features = false, optional = true }
 atty = { version = "0.2", default-features = false }
 git-testament = { version = "0.2.5", optional = true }
-rand = { version = "0.7", optional = true }
-rodio = { version = "0.11.0", optional = true }
-# saltwater-parser = { path = "saltwater-parser" }
-# saltwater-codegen = { path = "saltwater-codegen" }
 cranelift = "0.66"
 cranelift-module = "0.66"
 cranelift-object = "0.66"
@@ -56,7 +52,6 @@ proptest-derive = "0.1"
 
 [features]
 default = ["color-backtrace"]
-salty = ["rand", "rodio"]
 # for internal use
 _test_headers = []
 
