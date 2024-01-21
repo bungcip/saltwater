@@ -155,7 +155,7 @@ mod codegen_impls {
 
             match self {
                 // Integers
-                Bool => types::B1,
+                Bool => types::I8,
                 Char(_) | Short(_) | Int(_) | Long(_) | Pointer(_, _) | Enum(_, _) => {
                     let int_size = SIZE_T::from(CHAR_BIT)
                         * self
@@ -215,14 +215,13 @@ mod codegen_impls {
                     .collect()
             };
             if self.varargs {
-                let al = isa
-                    .register_info()
-                    .parse_regunit("rax")
-                    .expect("x86 should have an rax register");
-                params.push(AbiParam::special_reg(
+                // let al = isa
+                //     .register_info()
+                //     .parse_regunit("rax")
+                //     .expect("x86 should have an rax register");
+                params.push(AbiParam::special(
                     types::I8,
                     ArgumentPurpose::Normal,
-                    al,
                 ));
             }
             let return_type = if !self.should_return() {

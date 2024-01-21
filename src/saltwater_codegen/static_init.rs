@@ -4,7 +4,8 @@
 use std::convert::{TryFrom, TryInto};
 
 use cranelift::codegen::ir::types;
-use cranelift_module::{Backend, DataContext, DataId, Linkage};
+use cranelift_module::{DataId, Linkage, DataDescription};
+use cranelift_module::Module;
 
 use crate::saltwater_parser;
 
@@ -47,7 +48,7 @@ macro_rules! bytes {
     }};
 }
 
-impl<B: Backend> Compiler<B> {
+impl Compiler {
     pub(super) fn store_static(
         &mut self,
         symbol: Symbol,
@@ -63,19 +64,19 @@ impl<B: Backend> Compiler<B> {
             data: err,
             location,
         };
-        let align = metadata
-            .ctype
-            .alignof()
-            .map_err(|err| err.to_string())
-            .and_then(|size| {
-                size.try_into()
-                    .map_err(|_| format!("align of {} is greater than 256 bytes", metadata.id))
-            })
-            .map_err(err_closure)?;
-        if align == 0 {
-            // struct that was declared but never used
-            return Ok(());
-        }
+        // let align = metadata
+        //     .ctype
+        //     .alignof()
+        //     .map_err(|err| err.to_string())
+        //     .and_then(|size| {
+        //         size.try_into()
+        //             .map_err(|_| format!("align of {} is greater than 256 bytes", metadata.id))
+        //     })
+        //     .map_err(err_closure)?;
+        // if align == 0 {
+        //     // struct that was declared but never used
+        //     return Ok(());
+        // }
         let linkage = linkage_from_storage_class(metadata.storage_class).map_err(err_closure)?;
         let id = self
             .module
@@ -84,7 +85,6 @@ impl<B: Backend> Compiler<B> {
                 linkage,
                 !metadata.qualifiers.c_const,
                 false,
-                Some(align),
             )
             .map_err(|err| Locatable {
                 data: format!("error storing static value: {}", err),
@@ -98,7 +98,7 @@ impl<B: Backend> Compiler<B> {
             return Ok(());
         }
 
-        let mut ctx = DataContext::new();
+        let mut ctx = DataDescription::new();
         // TODO: all of this should happen in the `analyze` module
         if let Some(init) = init {
             let mut ctype = metadata.ctype.clone();
@@ -154,7 +154,7 @@ impl<B: Backend> Compiler<B> {
                 let name = format!("str.{}", len);
                 let id = match self
                     .module
-                    .declare_data(&name, Linkage::Local, false, false, None)
+                    .declare_data(&name, Linkage::Local, false, false)
                 {
                     Ok(id) => id,
                     Err(err) => {
@@ -166,7 +166,7 @@ impl<B: Backend> Compiler<B> {
                 (string, id)
             }
         };
-        let mut ctx = DataContext::new();
+        let mut ctx = DataDescription::new();
         ctx.define(string.into_boxed_slice());
         self.module
             .define_data(str_id, &ctx)
@@ -178,7 +178,7 @@ impl<B: Backend> Compiler<B> {
     }
     fn init_expr(
         &mut self,
-        ctx: &mut DataContext,
+        ctx: &mut DataDescription,
         buf: &mut [u8],
         offset: u32,
         expr: Expr,
@@ -223,7 +223,7 @@ impl<B: Backend> Compiler<B> {
         }
         Ok(())
     }
-    fn static_ref(&self, symbol: Symbol, member_offset: i64, offset: u32, ctx: &mut DataContext) {
+    fn static_ref(&self, symbol: Symbol, member_offset: i64, offset: u32, ctx: &mut DataDescription) {
         match self.declarations.get(&symbol) {
             Some(Id::Function(func_id)) => {
                 let func_ref = self.module.declare_func_in_data(*func_id, ctx);
@@ -240,7 +240,7 @@ impl<B: Backend> Compiler<B> {
     }
     fn init_symbol(
         &mut self,
-        ctx: &mut DataContext,
+        ctx: &mut DataDescription,
         buf: &mut [u8],
         mut offset: u32,
         initializer: Initializer,
@@ -311,7 +311,7 @@ impl<B: Backend> Compiler<B> {
     }
     fn init_array(
         &mut self,
-        ctx: &mut DataContext,
+        ctx: &mut DataDescription,
         buf: &mut [u8],
         mut offset: u32,
         initializers: Vec<Initializer>,

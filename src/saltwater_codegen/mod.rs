@@ -17,9 +17,11 @@ mod stmt;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::path::Path;
+use std::sync::Arc;
 
 use crate::saltwater_parser::arch::TARGET;
 use crate::saltwater_parser::{Opt, Program};
+use codegen::ir::UserFuncName;
 use cranelift::codegen::{
     self,
     ir::{
@@ -33,8 +35,9 @@ use cranelift::codegen::{
 };
 use cranelift::frontend::Switch;
 use cranelift::prelude::{Block, FunctionBuilder, FunctionBuilderContext};
-use cranelift_module::{self, Backend, DataId, FuncId, Linkage, Module};
-use cranelift_object::{ObjectBackend, ObjectBuilder};
+use cranelift_module::{self, DataId, FuncId, Linkage, Module};
+use cranelift_object::{ObjectBuilder};
+use cranelift_object::ObjectModule;
 
 use crate::saltwater_parser::data::{
     hir::{Declaration, Initializer, Stmt, Symbol},
@@ -42,7 +45,7 @@ use crate::saltwater_parser::data::{
     StorageClass, *,
 };
 
-pub(crate) fn get_isa() -> Box<dyn TargetIsa + 'static> {
+pub(crate) fn get_isa() -> Arc<dyn TargetIsa + 'static> {
     let mut flags_builder = cranelift::codegen::settings::builder();
     
 
@@ -60,18 +63,21 @@ pub(crate) fn get_isa() -> Box<dyn TargetIsa + 'static> {
         .set("enable_probestack", "false")
         .expect("enable_probestack should be a valid option");
     let flags = Flags::new(flags_builder);
-    cranelift::codegen::isa::lookup(TARGET)
-        .unwrap_or_else(|_| panic!("platform not supported: {}", TARGET))
-        .finish(flags)
+
+    let result = cranelift::codegen::isa::lookup(TARGET)
+        .unwrap_or_else(|_| panic!("platform not supported: {TARGET}"))    
+        .finish(flags);
+
+    result.unwrap()
 }
 
-pub fn initialize_aot_module(name: String) -> Module<ObjectBackend> {
+pub fn initialize_aot_module(name: String) -> ObjectModule {
     let builder = ObjectBuilder::new(
         get_isa(),
         name,
         cranelift_module::default_libcall_names(),
     );
-    Module::new(builder.expect("unsupported binary format or target architecture"))
+    ObjectModule::new(builder.expect("unsupported binary format or target architecture"))
 }
 
 enum Id {
@@ -80,8 +86,14 @@ enum Id {
     Local(StackSlot),
 }
 
-struct Compiler<T: Backend> {
-    module: Module<T>,
+#[derive(PartialEq, PartialOrd)]
+pub enum BlockState {
+    Empty,
+    Filled,
+}
+
+struct Compiler {
+    module: ObjectModule,
     debug: bool,
     // if false, we last saw a switch
     last_saw_loop: bool,
@@ -94,10 +106,12 @@ struct Compiler<T: Backend> {
     switches: Vec<(Switch, Option<Block>, Block)>,
     labels: HashMap<InternedStr, Block>,
     error_handler: ErrorHandler,
+
+    current_block_state: BlockState,
 }
 
-impl<B: Backend> Compiler<B> {
-    fn new(module: Module<B>, debug: bool) -> Compiler<B> {
+impl Compiler {
+    fn new(module: ObjectModule, debug: bool) -> Compiler {
         Compiler {
             module,
             declarations: HashMap::new(),
@@ -109,6 +123,7 @@ impl<B: Backend> Compiler<B> {
             strings: Default::default(),
             error_handler: Default::default(),
             debug,
+            current_block_state: BlockState::Empty,
         }
     }
     // we have to consider the following cases:
@@ -182,9 +197,9 @@ impl<B: Backend> Compiler<B> {
         let data = StackSlotData {
             kind,
             size,
-            offset: None,
+            // offset: None,
         };
-        let stack_slot = builder.create_stack_slot(data);
+        let stack_slot = builder.create_sized_stack_slot(data);
         self.declarations.insert(decl.symbol, Id::Local(stack_slot));
         if let Some(init) = decl.init {
             self.store_stack(init, stack_slot, builder)?;
@@ -245,9 +260,9 @@ impl<B: Backend> Compiler<B> {
             let stack_data = StackSlotData {
                 kind: StackSlotKind::ExplicitSlot,
                 size: u32_size,
-                offset: None,
+                // offset: None,
             };
-            let slot = builder.create_stack_slot(stack_data);
+            let slot = builder.create_sized_stack_slot(stack_data);
             // TODO: need to take the address before storing until Cranelift implements
             // stores for i8 and i16
             // then this can be replaced with `builder.ins().stack_store(ir_val, slot, 0);`
@@ -272,7 +287,8 @@ impl<B: Backend> Compiler<B> {
 
         // external name is meant to be a lookup in a symbol table,
         // but we just give it garbage values
-        let mut func = Function::with_name_signature(ExternalName::user(0, 0), signature);
+        let user_func_name = UserFuncName::user(0, 0);
+        let mut func = Function::with_name_signature(user_func_name, signature);
 
         // this context is just boiler plate
         let mut ctx = FunctionBuilderContext::new();
@@ -280,6 +296,7 @@ impl<B: Backend> Compiler<B> {
 
         let func_start = builder.create_block();
         builder.switch_to_block(func_start);
+        self.current_block_state = BlockState::Empty;
 
         let should_ret = func_type.should_return();
         if func_type.has_params() {
@@ -291,8 +308,10 @@ impl<B: Backend> Compiler<B> {
                 &mut builder,
             )?;
         }
+
         self.compile_all(stmts, &mut builder)?;
-        if !builder.is_filled() {
+        
+        if self.current_block_state != BlockState::Filled {
             let id = symbol.get().id;
             if id == InternedStr::get_or_intern("main") {
                 let ir_int = func_type.return_type.as_ir_type();
@@ -311,6 +330,7 @@ impl<B: Backend> Compiler<B> {
                 builder.ins().return_(&[]);
             }
         }
+
         builder.seal_all_blocks();
         builder.finalize();
 
@@ -328,10 +348,10 @@ impl<B: Backend> Compiler<B> {
         }
 
         let mut ctx = codegen::Context::for_function(func);
-        let mut trap_sink = codegen::binemit::NullTrapSink {};
+        // let mut trap_sink = codegen::binemit::NullTrapSink {};
         if let Err(err) = self
             .module
-            .define_function(func_id, &mut ctx, &mut trap_sink)
+            .define_function(func_id, &mut ctx)
         {
             panic!(
                 "definition error: {}\nnote: while compiling {}",
@@ -343,10 +363,10 @@ impl<B: Backend> Compiler<B> {
     }
 }
 
-pub type Product = <cranelift_object::ObjectBackend as Backend>::Product;
+pub type Product = cranelift_object::ObjectProduct;
 
 /// Compile and return the declarations and warnings.
-pub fn compile<B: Backend>(module: Module<B>, buf: &str, opt: Opt) -> Program<Module<B>> {
+pub fn compile(module: ObjectModule, buf: &str, opt: Opt) -> Program<ObjectModule> {
     use crate::saltwater_parser::check_semantics;
     use crate::vec_deque;
 

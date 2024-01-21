@@ -1,6 +1,7 @@
 use cranelift::codegen::ir::{condcodes, types, MemFlags};
 use cranelift::prelude::{FunctionBuilder, InstBuilder, Type as IrType, Value as IrValue};
-use cranelift_module::Backend;
+use cranelift_codegen::ir::condcodes::IntCC;
+use cranelift_module::Module;
 
 use super::{Compiler, Id};
 use crate::saltwater_parser::data::{
@@ -22,8 +23,13 @@ enum FuncCall {
     Named(Symbol),
     Indirect(Value),
 }
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+enum LogicalOp {
+    Or,
+    And,
+}
 
-impl<B: Backend> Compiler<B> {
+impl Compiler {
     // clippy doesn't like big match statements, but this is kind of essential complexity,
     // it can't be any smaller without supporting fewer features
     #[allow(clippy::cognitive_complexity)]
@@ -65,10 +71,10 @@ impl<B: Backend> Compiler<B> {
             ),
             // binary operators
             ExprType::Binary(BinaryOp::LogicalOr, left, right) => {
-                self.logical_expr(*left, *right, false, builder)
+                self.logical_expr(*left, *right, LogicalOp::Or, builder)
             }
             ExprType::Binary(BinaryOp::LogicalAnd, left, right) => {
-                self.logical_expr(*left, *right, true, builder)
+                self.logical_expr(*left, *right, LogicalOp::And, builder)
             }
             ExprType::Binary(BinaryOp::Assign, left, right) => {
                 self.assignment(*left, *right, builder)
@@ -114,19 +120,22 @@ impl<B: Backend> Compiler<B> {
                     ctype: loaded_ctype,
                 };
 
-                let addend = if increase { 1 } else { -1 };
-                let (addend_ir, add_func): (_, fn(_, _, _) -> _) = match previous_value.ctype {
-                    Type::Double => (builder.ins().f64const(addend as f64), InstBuilder::fadd),
-                    Type::Float => (builder.ins().f32const(addend as f32), InstBuilder::fadd),
-                    _ => (
-                        builder.ins().iconst(previous_value.ir_type, addend),
-                        InstBuilder::iadd,
-                    ),
+                // let addend = if increase { 1 } else { -1 };
+                let addend = 1;
+                let (addend_ir, add_func): (_, fn(_, _, _) -> _) = match (&previous_value.ctype, increase) {
+                    (Type::Double, true) => (builder.ins().f64const(addend as f64), InstBuilder::fadd),
+                    (Type::Double, false) => (builder.ins().f64const(addend as f64), InstBuilder::fsub),
+                    (Type::Float, true) => (builder.ins().f32const(addend as f32), InstBuilder::fadd),
+                    (Type::Float, false) => (builder.ins().f32const(addend as f32), InstBuilder::fsub),
+                    (_, true) => (builder.ins().iconst(previous_value.ir_type, addend), InstBuilder::iadd),
+                    (_, false) => (builder.ins().iconst(previous_value.ir_type, addend),InstBuilder::isub),
                 };
+
                 let new_value = add_func(builder.ins(), previous_value.ir_val, addend_ir);
                 builder
                     .ins()
                     .store(MemFlags::new(), new_value, lval.ir_val, 0);
+
                 Ok(previous_value)
             }
             ExprType::Noop(inner) => {
@@ -156,8 +165,7 @@ impl<B: Backend> Compiler<B> {
 
         let condition = self.compile_expr(condition, builder)?;
         let (block_if_true, block_if_false) = (builder.create_block(), builder.create_block());
-        builder.ins().brnz(condition.ir_val, block_if_true, &[]);
-        builder.ins().jump(block_if_false, &[]);
+        builder.ins().brif(condition.ir_val, block_if_true, &[], block_if_false, &[]);
 
         builder.switch_to_block(block_if_true);
         let left_val = self.compile_expr(left, builder)?;
@@ -166,6 +174,7 @@ impl<B: Backend> Compiler<B> {
         builder.switch_to_block(block_if_false);
         let right_val = self.compile_expr(right, builder)?;
         builder.ins().jump(target_block, &[right_val.ir_val]);
+
         builder.switch_to_block(target_block);
 
         Ok(Value {
@@ -178,31 +187,33 @@ impl<B: Backend> Compiler<B> {
         &mut self,
         left: Expr,
         right: Expr,
-        brz: bool,
+        op: LogicalOp,
         builder: &mut FunctionBuilder,
     ) -> IrResult {
-        let target_block = builder.create_block();
-        builder.append_block_param(target_block, types::B1);
+        let right_block = builder.create_block();
+        let merge_block = builder.create_block();
+
+
+        builder.append_block_param(merge_block, types::I8);
         let left = self.compile_expr(left, builder)?;
 
-        let branch_func = if brz {
-            InstBuilder::brz
-        } else {
-            InstBuilder::brnz
-        };
-        branch_func(builder.ins(), left.ir_val, target_block, &[left.ir_val]);
-        self.fallthrough(builder);
+        if op == LogicalOp::Or {
+            builder.ins().brif(left.ir_val, merge_block, &[left.ir_val], right_block, &[]);
+        }else{
+            builder.ins().brif(left.ir_val, right_block, &[], merge_block, &[left.ir_val]);
+        }
 
+        builder.switch_to_block(right_block);
         let right = self.compile_expr(right, builder)?;
-        builder.ins().jump(target_block, &[right.ir_val]);
+        builder.ins().jump(merge_block, &[right.ir_val]);
 
-        builder.switch_to_block(target_block);
+        builder.switch_to_block(merge_block);
+        let result_value = *builder.block_params(merge_block).first().unwrap();
+        let value = builder.ins().icmp_imm(IntCC::NotEqual, result_value, 0);
+
         Ok(Value {
-            ir_val: *builder
-                .block_params(target_block)
-                .first()
-                .expect("if we passed an block arg it should be here"),
-            ir_type: types::B1,
+            ir_val: value,
+            ir_type: types::I8,
             ctype: Type::Bool,
         })
     }
@@ -215,9 +226,9 @@ impl<B: Backend> Compiler<B> {
         builder: &mut FunctionBuilder,
     ) -> IrResult {
         let ir_val = match (token, ir_type) {
-            (LiteralValue::Int(i), types::B1) => builder.ins().bconst(ir_type, i != 0),
+            // (LiteralValue::Int(i), types::B1) => builder.ins().bconst(ir_type, i != 0),
             (LiteralValue::Int(i), _) => builder.ins().iconst(ir_type, i),
-            (LiteralValue::UnsignedInt(u), types::B1) => builder.ins().bconst(ir_type, u != 0),
+            // (LiteralValue::UnsignedInt(u), types::B1) => builder.ins().bconst(ir_type, u != 0),
             (LiteralValue::UnsignedInt(u), _) => builder.ins().iconst(ir_type, u as i64),
             (LiteralValue::Float(f), types::F32) => builder.ins().f32const(f as f32),
             (LiteralValue::Float(f), types::F64) => builder.ins().f64const(f),
@@ -287,8 +298,8 @@ impl<B: Backend> Compiler<B> {
             (Div, ty, _) if ty.is_float() => b::fdiv,
             (Mod, ty, true) if ty.is_int() => b::srem,
             (Mod, ty, false) if ty.is_int() => b::urem,
-            (BitwiseAnd, ty, _) if ty.is_int() || ty.is_bool() => b::band,
-            (BitwiseOr, ty, _) if ty.is_int() || ty.is_bool() => b::bor,
+            (BitwiseAnd, ty, _) if ty.is_int()  => b::band,
+            (BitwiseOr, ty, _) if ty.is_int()  => b::bor,
             (Shl, ty, _) if ty.is_int() => b::ishl,
             // arithmetic shift: keeps the sign of `left`
             (Shr, ty, true) if ty.is_int() => b::sshr,
@@ -353,10 +364,10 @@ impl<B: Backend> Compiler<B> {
             (types::F32, types::F64) => builder.ins().fpromote(to, val),
             (types::F64, types::F32) => builder.ins().fdemote(to, val),
             // narrowing and widening integer conversions
-            (b, i) if b.is_bool() && i.is_int() => builder.ins().bint(to, val),
-            (i, b) if i.is_int() && b.is_bool() => {
-                builder.ins().icmp_imm(condcodes::IntCC::NotEqual, val, 0)
-            }
+            // (b, i) if b.is_int() && i.is_int() => builder.ins().bint(to, val),
+            // (i, b) if i.is_int() && b.is_int() => {
+            //     builder.ins().icmp_imm(condcodes::IntCC::NotEqual, val, 0)
+            // }
             (big_int, small_int)
                 if big_int.is_int()
                     && small_int.is_int()
@@ -393,11 +404,11 @@ impl<B: Backend> Compiler<B> {
             // bool/float conversions
             // cranelift doesn't seem to have a builtin way to do this
             // instead, this converts from bool to signed int and then int to float
-            (b, f) if b.is_bool() && f.is_float() => {
+            (b, f) if b.is_int() && f.is_float() => {
                 let int_val = Self::cast_ir(b, types::I32, val, false, true, builder);
                 Self::cast_ir(types::I8, f, int_val, true, true, builder)
             }
-            (f, b) if b.is_bool() && f.is_float() => {
+            (f, b) if b.is_int() && f.is_float() => {
                 let int_val = Self::cast_ir(f, types::I32, val, true, true, builder);
                 Self::cast_ir(types::I8, b, int_val, true, false, builder)
             }
@@ -411,7 +422,7 @@ impl<B: Backend> Compiler<B> {
             _ => unreachable!("parser should catch illegal types"),
         })
     }
-    fn load_addr(&self, var: Symbol, builder: &mut FunctionBuilder) -> IrResult {
+    fn load_addr(&mut self, var: Symbol, builder: &mut FunctionBuilder) -> IrResult {
         let metadata = var.get();
         let ptr_type = Type::ptr_type();
         let ir_val = match self
@@ -447,11 +458,11 @@ impl<B: Backend> Compiler<B> {
         let ir_val = if left.ir_type.is_int() {
             let code = token.to_int_compare(left.ctype.is_signed());
             builder.ins().icmp(code, left.ir_val, right.ir_val)
-        } else if left.ir_type.is_bool() {
-            let left = builder.ins().bint(types::I8, left.ir_val);
-            let right = builder.ins().bint(types::I8, right.ir_val);
-            let code = token.to_int_compare(false);
-            builder.ins().icmp(code, left, right)
+        // } else if left.ir_type.is_int() {
+        //     let left = builder.ins().bint(types::I8, left.ir_val);
+        //     let right = builder.ins().bint(types::I8, right.ir_val);
+        //     let code = token.to_int_compare(false);
+        //     builder.ins().icmp(code, left, right)
         } else {
             assert!(left.ir_type.is_float());
             let code = token.to_float_compare();
@@ -459,7 +470,7 @@ impl<B: Backend> Compiler<B> {
         };
         Ok(Value {
             ir_val,
-            ir_type: types::B1,
+            ir_type: types::I8,
             ctype: left.ctype,
         })
     }
@@ -486,6 +497,7 @@ impl<B: Backend> Compiler<B> {
                 align,
                 // could be overlapping: `s = s;`
                 false,
+                MemFlags::new()
             );
             return Ok(value);
         }
@@ -513,8 +525,9 @@ impl<B: Backend> Compiler<B> {
         let mut float_variadic = 0;
         if ftype.varargs {
             // needs to be done before we move the args by compiling them
-            if self.module.isa().name() != "x86" {
-                unimplemented!("variadic args for architectures other than x86");
+            let isa_name = self.module.isa().name();
+            if isa_name != "x86" && isa_name != "x64" {
+                unimplemented!("variadic args for architectures other than x86 (isa = {})", isa_name);
             }
             // this is an utter hack
             // https://github.com/CraneStation/cranelift/issues/212#issuecomment-549111736
@@ -552,13 +565,13 @@ impl<B: Backend> Compiler<B> {
                 // stolen from https://github.com/bjorn3/rustc_codegen_cranelift/blob/82fde5b62281fa51a/src/abi/mod.rs#L535
                 if ftype.varargs {
                     let call_sig = builder.func.dfg.call_signature(call).unwrap();
-                    let al = self
-                        .module
-                        .isa()
-                        .register_info()
-                        .parse_regunit("rax")
-                        .expect("x86 should have an rax register");
-                    let float_arg = AbiParam::special_reg(types::I8, ArgumentPurpose::Normal, al);
+                    // let al = self
+                    //     .module
+                    //     .isa()
+                    //     // .register_info()
+                    //     .parse_regunit("rax")
+                    //     .expect("x86 should have an rax register");
+                    let float_arg = AbiParam::special(types::I8, ArgumentPurpose::Normal);
                     // NOTE: this is added both here and in signature() because we overwrite the previous params
                     let abi_params = ftype
                         .params
