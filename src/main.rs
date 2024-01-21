@@ -39,8 +39,6 @@ FLAGS:
                             This does type checking and validation and also desugars various expressions.
         --debug-ir         If set, print the intermediate representation (IR) of the program in addition to compiling.
         --debug-lex        If set, print all tokens found by the lexer in addition to compiling.
-        --jit              If set, will use JIT compilation for C code and instantly run compiled code (No files produced).
-                            NOTE: this option only works if saltwater was compiled with the `jit` feature.
     -h, --help             Prints help information
     -c, --no-link          If set, compile and assemble but do not link. Object file is machine-dependent.
     -E, --preprocess-only  If set, preprocess only, but do not do anything else.
@@ -66,7 +64,7 @@ ARGS:
 
 const USAGE: &str = "\
 usage: swcc [--help | -h] [--version | -V] [--debug-ir] [--debug-ast] [--debug-lex]
-            [--debug-hir] [--jit] [--no-link | -c] [--preprocess-only | -E]
+            [--debug-hir] [--no-link | -c] [--preprocess-only | -E]
             [-I <dir>] [-D <id[=val]>] [<file>]";
 
 struct BinOpt {
@@ -142,26 +140,7 @@ fn real_main(buf: ArcStr, bin_opt: BinOpt, output: &Path) -> Result<(), (Error, 
     } else {
         bin_opt.opt
     };
-    #[cfg(feature = "jit")]
-    {
-        if !opt.jit {
-            aot_main(&buf, opt, output, bin_opt.color)
-        } else {
-            let module = saltwater_codegen::initialize_jit_module();
-            let Program {
-                result,
-                warnings,
-                files,
-            } = compile(module, &buf, opt);
-            handle_warnings(warnings, &files, bin_opt.color);
-            let mut jit = saltwater_codegen::JIT::from(sw_try!(result, files));
-            if let Some(exit_code) = unsafe { jit.run_main() } {
-                std::process::exit(exit_code);
-            }
-            Ok(())
-        }
-    }
-    #[cfg(not(feature = "jit"))]
+    
     aot_main(&buf, opt, output, bin_opt.color)
 }
 
@@ -370,8 +349,6 @@ fn parse_args() -> Result<(BinOpt, PathBuf), pico_args::Error> {
             debug_ast: input.contains("--debug-ast"),
             debug_hir: input.contains("--debug-hir"),
             no_link: input.contains(["-c", "--no-link"]),
-            #[cfg(feature = "jit")]
-            jit: input.contains("--jit"),
             max_errors,
             definitions,
             search_path,
@@ -379,7 +356,6 @@ fn parse_args() -> Result<(BinOpt, PathBuf), pico_args::Error> {
             // so we have to parse it last.
             filename: input
                 .free_from_fn(str_to_path_buf)?
-                .unwrap_or_else(|| "-".into()),
         },
         color: color_choice,
     };

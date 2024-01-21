@@ -18,6 +18,8 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::path::Path;
 
+use crate::saltwater_parser::arch::TARGET;
+use crate::saltwater_parser::{Opt, Program};
 use cranelift::codegen::{
     self,
     ir::{
@@ -33,8 +35,6 @@ use cranelift::frontend::Switch;
 use cranelift::prelude::{Block, FunctionBuilder, FunctionBuilderContext};
 use cranelift_module::{self, Backend, DataId, FuncId, Linkage, Module};
 use cranelift_object::{ObjectBackend, ObjectBuilder};
-use crate::saltwater_parser::arch::TARGET;
-use crate::saltwater_parser::{Opt, Program};
 
 use crate::saltwater_parser::data::{
     hir::{Declaration, Initializer, Stmt, Symbol},
@@ -42,15 +42,15 @@ use crate::saltwater_parser::data::{
     StorageClass, *,
 };
 
-pub(crate) fn get_isa(jit: bool) -> Box<dyn TargetIsa + 'static> {
+pub(crate) fn get_isa() -> Box<dyn TargetIsa + 'static> {
     let mut flags_builder = cranelift::codegen::settings::builder();
-    // `simplejit` requires non-PIC code
-    if !jit {
-        // allow creating shared libraries
-        flags_builder
-            .enable("is_pic")
-            .expect("is_pic should be a valid option");
-    }
+    
+
+    // allow creating shared libraries
+    flags_builder
+        .enable("is_pic")
+        .expect("is_pic should be a valid option");
+
     // use debug assertions
     flags_builder
         .enable("enable_verifier")
@@ -67,7 +67,7 @@ pub(crate) fn get_isa(jit: bool) -> Box<dyn TargetIsa + 'static> {
 
 pub fn initialize_aot_module(name: String) -> Module<ObjectBackend> {
     let builder = ObjectBuilder::new(
-        get_isa(false),
+        get_isa(),
         name,
         cranelift_module::default_libcall_names(),
     );
@@ -347,7 +347,7 @@ pub type Product = <cranelift_object::ObjectBackend as Backend>::Product;
 
 /// Compile and return the declarations and warnings.
 pub fn compile<B: Backend>(module: Module<B>, buf: &str, opt: Opt) -> Program<Module<B>> {
-    use crate::saltwater_parser::{check_semantics};
+    use crate::saltwater_parser::check_semantics;
     use crate::vec_deque;
 
     let debug_asm = opt.debug_asm;
@@ -409,7 +409,9 @@ pub fn assemble(product: Product, output: &Path) -> Result<(), crate::saltwater_
     use std::fs::File;
     use std::io::{self, Write};
 
-    let bytes = product.emit().map_err(crate::saltwater_parser::Error::Platform)?;
+    let bytes = product
+        .emit()
+        .map_err(crate::saltwater_parser::Error::Platform)?;
     File::create(output)?
         .write_all(&bytes)
         .map_err(io::Error::into)
@@ -437,131 +439,6 @@ pub fn link(obj_file: &Path, output: &Path) -> Result<(), std::io::Error> {
         Err(Error::new(ErrorKind::Other, "linking program failed"))
     } else {
         Ok(())
-    }
-}
-
-#[cfg(feature = "jit")]
-pub use jit::*;
-
-#[cfg(feature = "jit")]
-mod jit {
-    use super::*;
-    use cranelift_simplejit::{SimpleJITBackend, SimpleJITBuilder};
-    use std::convert::TryFrom;
-    use std::rc::Rc;
-
-    pub fn initialize_jit_module() -> Module<SimpleJITBackend> {
-        let libcall_names = cranelift_module::default_libcall_names();
-        Module::new(SimpleJITBuilder::with_isa(get_isa(true), libcall_names))
-    }
-
-    /// Structure used to handle compiling C code to memory instead of to disk.
-    ///
-    /// You can use [`from_string`] to create a JIT instance.
-    /// Alternatively, if you don't care about compile warnings, you can use `JIT::try_from` instead.
-    /// If you already have a `Module`, you can use `JIT::from` to avoid having to `unwrap()`.
-    ///
-    /// JIT stands for 'Just In Time' compiled, the way that Java and JavaScript work.
-    ///
-    /// [`from_string`]: #method.from_string
-    pub struct JIT {
-        module: Module<SimpleJITBackend>,
-    }
-
-    impl From<Module<SimpleJITBackend>> for JIT {
-        fn from(module: Module<SimpleJITBackend>) -> Self {
-            Self { module }
-        }
-    }
-
-    impl TryFrom<Rc<str>> for JIT {
-        type Error = saltwater_parser::Error;
-        fn try_from(source: Rc<str>) -> Result<JIT, Self::Error> {
-            JIT::from_string(source, Opt::default()).result
-        }
-    }
-
-    impl JIT {
-        /// Compile string and return JITed code.
-        pub fn from_string<R: Into<Rc<str>>>(
-            source: R,
-            opt: Opt,
-        ) -> Program<Self, saltwater_parser::Error> {
-            let source = source.into();
-            let module = initialize_jit_module();
-            let program = compile(module, &source, opt);
-            let result = match program.result {
-                Ok(module) => Ok(JIT::from(module)),
-                Err(errs) => Err(errs.into()),
-            };
-            Program {
-                result,
-                warnings: program.warnings,
-                files: program.files,
-            }
-        }
-
-        /// Invoke this function before trying to get access to "new" compiled functions.
-        pub fn finalize(&mut self) {
-            self.module.finalize_definitions();
-        }
-        /// Get a compiled function. If this function doesn't exist then `None` is returned, otherwise its address returned.
-        ///
-        /// # Panics
-        /// Panics if function is not compiled (finalized). Try to invoke `finalize` before using `get_compiled_function`.
-        pub fn get_compiled_function(&mut self, name: &str) -> Option<*const u8> {
-            use cranelift_module::FuncOrDataId;
-
-            let name = self.module.get_name(name);
-            if let Some(FuncOrDataId::Func(id)) = name {
-                Some(self.module.get_finalized_function(id))
-            } else {
-                None
-            }
-        }
-        /// Get compiled static data. If this data doesn't exist then `None` is returned, otherwise its address and size are returned.
-        pub fn get_compiled_data(&mut self, name: &str) -> Option<(*mut u8, usize)> {
-            use cranelift_module::FuncOrDataId;
-
-            let name = self.module.get_name(name);
-            if let Some(FuncOrDataId::Data(id)) = name {
-                Some(self.module.get_finalized_data(id))
-            } else {
-                None
-            }
-        }
-        /// Given a module, run the `main` function.
-        ///
-        /// This automatically calls `self.finalize()`.
-        /// If `main()` does not exist in the module, returns `None`; otherwise returns the exit code.
-        ///
-        /// # Safety
-        /// This function runs arbitrary C code.
-        /// It can segfault, access out-of-bounds memory, cause data races, or do anything else C can do.
-        #[allow(unsafe_code)]
-        pub unsafe fn run_main(&mut self) -> Option<i32> {
-            self.finalize();
-            let main = self.get_compiled_function("main")?;
-            let args = std::env::args().skip(1);
-            let argc = args.len() as i32;
-            // CString should be alive if we want to pass its pointer to another function,
-            // otherwise this may lead to UB.
-            let vec_args = args
-                .map(|string| std::ffi::CString::new(string).unwrap())
-                .collect::<Vec<_>>();
-            // This vec needs to be stored so we aren't passing a pointer to a freed temporary.
-            let argv = vec_args
-                .iter()
-                .map(|cstr| cstr.as_ptr() as *const u8)
-                .collect::<Vec<_>>();
-            assert_ne!(main, std::ptr::null());
-            // this transmute is safe: this function is finalized (`self.finalize()`)
-            // and **guaranteed** to be non-null
-            let main: unsafe extern "C" fn(i32, *const *const u8) -> i32 =
-                std::mem::transmute(main);
-            // though transmute is safe, invoking this function is unsafe because we invoke C code.
-            Some(main(argc, argv.as_ptr() as *const *const u8))
-        }
     }
 }
 

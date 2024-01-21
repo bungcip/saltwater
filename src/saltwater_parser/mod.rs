@@ -169,10 +169,6 @@ pub struct Opt {
     /// If set, compile and assemble but do not link. Object file is machine-dependent.
     pub no_link: bool,
 
-    #[cfg(feature = "jit")]
-    /// If set, compile and emit JIT code, and do not emit object files and binaries.
-    pub jit: bool,
-
     /// The maximum number of errors to allow before giving up.
     /// If None, allows an unlimited number of errors.
     pub max_errors: Option<std::num::NonZeroUsize>,
