@@ -533,8 +533,7 @@ impl PureAnalyzer {
         };
         let members: Vec<_> = ast_members
             .into_iter()
-            .map(|m| self.struct_declarator_list(m, location).into_iter())
-            .flatten()
+            .flat_map(|m| self.struct_declarator_list(m, location).into_iter())
             .collect();
         if members.is_empty() {
             self.err(SemanticError::from("cannot have empty struct"), location);

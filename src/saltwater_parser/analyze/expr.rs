@@ -374,7 +374,7 @@ impl PureAnalyzer {
             | (Type::Array(to, _), i) if i.is_integral() && to.is_complete() => {
                 let to = to.clone();
                 let (left, right) = (left.rval(), right.rval());
-                return self.pointer_arithmetic(left, right, &*to, location);
+                return self.pointer_arithmetic(left, right, &to, location);
             }
             // `i + p`
             (i, Type::Pointer(to, _))
@@ -382,7 +382,7 @@ impl PureAnalyzer {
             | (i, Type::Array(to, _)) if i.is_integral() && is_add && to.is_complete() => {
                 let to = to.clone();
                 let (left, right) = (left.rval(), right.rval());
-                return self.pointer_arithmetic(right, left, &*to, location);
+                return self.pointer_arithmetic(right, left, &to, location);
             }
             _ => {}
         };

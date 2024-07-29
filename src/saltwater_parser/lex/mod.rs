@@ -137,13 +137,13 @@ impl Lexer {
     fn parse_num(&mut self, start: char) -> Result<Token, LexError> {
         // start - '0' breaks for hex digits
         assert!(
-            '0' <= start && start <= '9',
+            start.is_ascii_digit(),
             "main loop should only pass [0-9] as start to parse_num"
         );
         let span_start = self.get_location().offset - 1; // -1 for `start`
         let float_literal = |f| Token::Literal(LiteralToken::Float(f));
         let mut buf = String::new();
-        buf.push(start as char);
+        buf.push(start);
         // check for radix other than 10 - but if we see '.', use 10
         let radix = if start == '0' {
             if self.match_next('b') {
@@ -176,7 +176,7 @@ impl Lexer {
         if let Some('e') | Some('E') | Some('p') | Some('P') = self.peek() {
             self.parse_exponent(radix == Radix::Hexadecimal)?;
             self.consume_float_suffix();
-            return Ok(self.slice(span_start)).map(float_literal);
+            return Ok(float_literal(self.slice(span_start)));
         }
         let literal = if self.match_next('u') || self.match_next('U') {
             LiteralToken::UnsignedInt(self.slice(span_start))
@@ -199,7 +199,6 @@ impl Lexer {
     fn parse_float(&mut self, radix: Radix, span_start: u32) -> Result<Substr, LexError> {
         // parse fraction: second {digits} in regex
         while let Some(c) = self.peek() {
-            let c = c as char;
             if c.is_digit(radix.as_u8().into()) {
                 self.next_char();
             } else {
@@ -219,7 +218,7 @@ impl Lexer {
     // should only be called at the end of a number. mostly error handling
     fn parse_exponent(&mut self, hex: bool) -> Result<(), LexError> {
         let is_digit =
-            |c: Option<char>| c.map_or(false, |c| (c as char).is_digit(10) || c == '+' || c == '-');
+            |c: Option<char>| c.map_or(false, |c| c.is_ascii_digit() || c == '+' || c == '-');
         if hex {
             if self.match_next('p') || self.match_next('P') {
                 if !is_digit(self.peek()) {
@@ -234,8 +233,7 @@ impl Lexer {
             self.next_char();
         }
         while let Some(c) = self.peek() {
-            let c = c as char;
-            if !(c).is_digit(10) {
+            if !(c).is_ascii_digit() {
                 break;
             }
             self.next_char();
@@ -254,7 +252,7 @@ impl Lexer {
         };
         let mut saw_digit = false;
         while let Some(c) = self.peek() {
-            match parse_digit(c as char)? {
+            match parse_digit(c)? {
                 Some(_) => {
                     self.next_char();
                     saw_digit = true;
@@ -545,7 +543,7 @@ impl Iterator for Lexer {
                 x => {
                     return Err(self
                         .span(span_start)
-                        .with(LexError::UnknownToken(x as char)));
+                        .with(LexError::UnknownToken(x)));
                 }
             };
             // We've seen a token if this isn't # or whitespace
@@ -684,7 +682,7 @@ pub(crate) trait LiteralParser {
         // at most 3 digits in an octal constant, `start` is the first so only 2 possible left
         for _ in 0..2 {
             match self.peek() {
-                Some(c) if '0' <= c && c < '8' => {
+                Some(c) if ('0'..'8').contains(&c) => {
                     self.next_char();
                     base <<= 3; // base *= 8
                     base += to_digit(c);
@@ -1003,7 +1001,7 @@ fn parse_int_raw(buf: &str) -> Result<u64, SyntaxError> {
 }
 
 impl LiteralToken {
-    pub fn parse(self) -> Result<LiteralValue, SyntaxError> {
+    pub(crate) fn parse(self) -> Result<LiteralValue, SyntaxError> {
         match self {
             LiteralToken::Int(rcstr) => Ok(LiteralValue::Int(
                 i64::try_from(parse_int_raw(rcstr.as_str())?).map_err(|_| {
@@ -1025,10 +1023,7 @@ impl LiteralToken {
                 } else {
                     buf.parse()?
                 };
-                let should_be_zero = buf.chars().all(|c| match c {
-                    '.' | '+' | '-' | 'e' | 'p' | '0' => true,
-                    _ => false,
-                });
+                let should_be_zero = buf.chars().all(|c| matches!(c, '.' | '+' | '-' | 'e' | 'p' | '0'));
                 if float == 0.0 && !should_be_zero {
                     Err(SyntaxError::FloatUnderflow)
                 } else {

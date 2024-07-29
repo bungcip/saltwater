@@ -355,7 +355,7 @@ impl Display for Qualifiers {
             (false, true) => "_Noreturn",
             (false, false) => "",
         };
-        if basic_quals != "" && func_quals != "" {
+        if !basic_quals.is_empty() && !func_quals.is_empty() {
             basic_quals.push(' ');
         }
         basic_quals.push_str(func_quals);

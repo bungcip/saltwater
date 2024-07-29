@@ -204,7 +204,7 @@ mod codegen_impls {
         }
 
         /// Generate the IR function signature for `self`
-        pub fn signature(&self, isa: &dyn TargetIsa) -> Signature {
+        pub fn signature(&self, _isa: &dyn TargetIsa) -> Signature {
             let mut params = if self.params.len() == 1 && self.params[0].get().ctype == Type::Void {
                 // no arguments
                 Vec::new()

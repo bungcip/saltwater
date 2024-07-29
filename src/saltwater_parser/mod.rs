@@ -65,7 +65,7 @@ pub use data::*;
 // https://github.com/rust-lang/rust/issues/64762
 #[allow(unreachable_pub)]
 pub use lex::{Definition, Lexer, PreProcessor, PreProcessorBuilder};
-pub use parse::Parser;
+use parse::Parser;
 
 #[macro_use]
 mod macros;

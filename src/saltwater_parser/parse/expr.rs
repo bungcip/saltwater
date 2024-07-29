@@ -118,16 +118,16 @@ impl TryFrom<&Token> for BinaryPrecedence {
 
 impl<I: Lexer> Parser<I> {
     #[inline]
-    pub fn expr(&mut self) -> SyntaxResult<Expr> {
+    pub(crate) fn expr(&mut self) -> SyntaxResult<Expr> {
         let start = self.unary_expr()?;
         self.binary_expr(start, 0)
     }
     #[inline]
-    pub fn assignment_expr(&mut self) -> SyntaxResult<Expr> {
+    pub(crate) fn assignment_expr(&mut self) -> SyntaxResult<Expr> {
         self.custom_expr(BinaryPrecedence::Assignment(AssignmentToken::Equal))
     }
     #[inline]
-    pub fn ternary_expr(&mut self) -> SyntaxResult<Expr> {
+    pub(crate) fn ternary_expr(&mut self) -> SyntaxResult<Expr> {
         self.custom_expr(BinaryPrecedence::Ternary)
     }
     fn custom_expr(&mut self, prec: BinaryPrecedence) -> SyntaxResult<Expr> {
@@ -161,7 +161,7 @@ impl<I: Lexer> Parser<I> {
                 let right_start = self.unary_expr()?;
                 let right = self.binary_expr(right_start, BinaryPrecedence::Ternary.prec())?;
 
-                let location = left.location.merge(&inner.location).merge(&right.location);
+                let location = left.location.merge(inner.location).merge(right.location);
                 let ternary = ExprType::Ternary(Box::new(left), Box::new(inner), Box::new(right));
                 left = Expr::new(ternary, location);
                 continue;
@@ -171,7 +171,7 @@ impl<I: Lexer> Parser<I> {
             };
 
             let constructor = binop.constructor();
-            let location = location.merge(&right.location);
+            let location = location.merge(right.location);
             left = location.with(constructor(left, right));
         }
         Ok(left)
@@ -255,7 +255,7 @@ impl<I: Lexer> Parser<I> {
             let _guard2 = self.recursion_check();
             let mut inner = self.expr()?;
             let end_loc = self.expect(Token::RightParen)?.location;
-            inner.location = paren.location.merge(&end_loc);
+            inner.location = paren.location.merge(end_loc);
             inner
         } else if let Some(loc) = self.match_id() {
             loc.map(ExprType::Id)
@@ -279,7 +279,7 @@ impl<I: Lexer> Parser<I> {
             location,
         }) = self.match_postfix_op()?
         {
-            let location = expr.location.merge(&location);
+            let location = expr.location.merge(location);
             expr = location.with(postfix_op(expr));
         }
         Ok(expr)
@@ -319,7 +319,7 @@ impl<I: Lexer> Parser<I> {
         let needs_id = |this: &mut Self, constructor: fn(Box<Expr>, InternedStr) -> ExprType| {
             let start = next_location(this);
             let Locatable { data: id, location } = this.expect_id()?;
-            let location = start.merge(&location);
+            let location = start.merge(location);
             Ok((Box::new(move |expr| constructor(expr, id)) as _, location))
         };
         // postfix operator
@@ -338,7 +338,7 @@ impl<I: Lexer> Parser<I> {
                 let start = next_location(self);
                 let index = self.expr()?;
                 let end = self.expect(Token::RightBracket)?.location;
-                let location = start.merge(&index.location).merge(&end);
+                let location = start.merge(index.location).merge(end);
                 (
                     Box::new(move |expr| ExprType::Index(expr, Box::new(index))),
                     location,
@@ -348,12 +348,12 @@ impl<I: Lexer> Parser<I> {
                 let mut start = next_location(self);
                 let mut args = Vec::new();
                 if let Some(token) = self.match_next(&Token::RightParen) {
-                    start = start.merge(&token.location);
+                    start = start.merge(token.location);
                 } else {
                     loop {
                         // TODO: maybe we could do some error handling here and consume the end right paren
                         let arg = self.ternary_expr()?;
-                        start.merge(&arg.location);
+                        start.merge(arg.location);
                         args.push(arg);
                         if let Some(token) = self.match_next(&Token::Comma) {
                             start.merge(token.location);

@@ -1,8 +1,8 @@
 use cranelift::codegen::cursor::Cursor;
 use cranelift::frontend::Switch;
 use cranelift::prelude::{Block, FunctionBuilder, InstBuilder};
-use cranelift_codegen::ir::Type;
-use cranelift_codegen::ir::types::I32;
+
+
 
 
 use super::{Compiler, BlockState};

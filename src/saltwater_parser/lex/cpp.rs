@@ -346,8 +346,8 @@ impl<'a> PreProcessor<'a> {
             "__STDC_NO_COMPLEX__".into() => int_def(1),
             "__STDC_NO_THREADS__".into() => int_def(1),
             "__STDC_NO_VLA__".into() => int_def(1),
-            "__DATE__".into() => str_def(&now.format(date_format).unwrap()),
-            "__TIME__".into() => str_def(&now.format(time_format).unwrap()),
+            "__DATE__".into() => str_def(now.format(date_format).unwrap()),
+            "__TIME__".into() => str_def(now.format(time_format).unwrap()),
         };
         definitions.extend(user_definitions);
         let mut search_path = vec![
@@ -356,7 +356,7 @@ impl<'a> PreProcessor<'a> {
             PathBuf::from(format!("/usr/include/{}", system_path)).into(),
             Path::new("/usr/include").into(),
         ];
-        search_path.extend(user_search_path.into_iter());
+        search_path.extend(user_search_path);
 
         let file_processor = FileProcessor::new(chars, filename, debug);
 
@@ -1178,7 +1178,7 @@ fn int_def(i: i32) -> Definition {
     Definition::Object(vec![LiteralToken::Int(Substr::from(i.to_string())).into()])
 }
 fn str_def<S: Into<String>>(s: S) -> Definition {
-    let substr = Substr::from(arcstr::format!("\"{}\"", s.into().replace(r#"""#, r#"\""#)));
+    let substr = Substr::from(arcstr::format!("\"{}\"", s.into().replace('"', r#"\""#)));
     Definition::Object(vec![LiteralToken::Str(vec![substr]).into()])
 }
 

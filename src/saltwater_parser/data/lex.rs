@@ -26,15 +26,15 @@ impl Span {
     }
 }
 
-impl Into<codespan::Span> for Span {
-    fn into(self) -> codespan::Span {
-        codespan::Span::new(self.start, self.end)
+impl From<Span> for codespan::Span {
+    fn from(val: Span) -> Self {
+        codespan::Span::new(val.start, val.end)
     }
 }
 
-impl Into<Range<usize>> for Span {
-    fn into(self) -> Range<usize> {
-        (self.start as usize)..(self.end as usize)
+impl From<Span> for Range<usize> {
+    fn from(val: Span) -> Self {
+        (val.start as usize)..(val.end as usize)
     }
 }
 

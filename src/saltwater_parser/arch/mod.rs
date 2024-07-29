@@ -61,7 +61,7 @@ impl StructType {
         symbols
             .iter()
             .try_fold(0, |offset, symbol| {
-                Ok(StructType::next_offset(offset, &symbol.ctype)?)
+                StructType::next_offset(offset, &symbol.ctype)
             })
             .and_then(|size_t| {
                 let align_minus_one = self.align()? - 1;

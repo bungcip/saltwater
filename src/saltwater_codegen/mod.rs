@@ -27,8 +27,7 @@ use cranelift::codegen::{
     ir::{
         entities::StackSlot,
         function::Function,
-        stackslot::{StackSlotData, StackSlotKind},
-        ExternalName, InstBuilder, MemFlags,
+        stackslot::{StackSlotData, StackSlotKind}, InstBuilder, MemFlags,
     },
     isa::TargetIsa,
     settings::{self, Configurable, Flags},
@@ -194,11 +193,7 @@ impl Compiler {
                 location,
             }))
         };
-        let data = StackSlotData {
-            kind,
-            size,
-            // offset: None,
-        };
+        let data = StackSlotData::new(kind, size, 0);
         let stack_slot = builder.create_sized_stack_slot(data);
         self.declarations.insert(decl.symbol, Id::Local(stack_slot));
         if let Some(init) = decl.init {
@@ -257,11 +252,7 @@ impl Compiler {
                 ),
                 Ok(size) => size,
             };
-            let stack_data = StackSlotData {
-                kind: StackSlotKind::ExplicitSlot,
-                size: u32_size,
-                // offset: None,
-            };
+            let stack_data = StackSlotData::new(StackSlotKind::ExplicitSlot, u32_size, 0);
             let slot = builder.create_sized_stack_slot(stack_data);
             // TODO: need to take the address before storing until Cranelift implements
             // stores for i8 and i16
@@ -393,7 +384,7 @@ pub fn compile(module: ObjectModule, buf: &str, opt: Opt) -> Program<ObjectModul
         let current = match &meta.ctype {
             Type::Function(func_type) => match decl.data.init {
                 Some(Initializer::FunctionBody(stmts)) => {
-                    compiler.compile_func(decl.data.symbol, &func_type, stmts, decl.location)
+                    compiler.compile_func(decl.data.symbol, func_type, stmts, decl.location)
                 }
                 None => compiler.declare_func(decl.data.symbol, false).map(|_| ()),
                 _ => unreachable!("functions can only be initialized by a FunctionBody"),
@@ -443,7 +434,7 @@ pub fn link(obj_file: &Path, output: &Path) -> Result<(), std::io::Error> {
 
     // link the .o file using host linker
     let status = Command::new("cc")
-        .args(&[&obj_file, Path::new("-o"), output])
+        .args([&obj_file, Path::new("-o"), output])
         .status()
         .map_err(|err| {
             if err.kind() == ErrorKind::NotFound {

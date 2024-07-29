@@ -1,4 +1,4 @@
-use cranelift::codegen::ir::{condcodes, types, MemFlags};
+use cranelift::codegen::ir::{types, MemFlags};
 use cranelift::prelude::{FunctionBuilder, InstBuilder, Type as IrType, Value as IrValue};
 use cranelift_codegen::ir::condcodes::IntCC;
 use cranelift_module::Module;

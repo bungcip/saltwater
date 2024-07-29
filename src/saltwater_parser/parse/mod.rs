@@ -16,11 +16,11 @@ type Lexeme = CompileResult<Locatable<Token>>;
 type SyntaxResult<T> = Result<T, Locatable<SyntaxError>>;
 
 /// Trait alias for Iterator, but stable
-pub trait Lexer: Iterator<Item = Lexeme> {}
+pub(crate) trait Lexer: Iterator<Item = Lexeme> {}
 impl<I: Iterator<Item = Lexeme>> Lexer for I {}
 
 #[derive(Debug)]
-pub struct Parser<I: Lexer> {
+pub(crate) struct Parser<I: Lexer> {
     /// hack so that we know that `typedef int i; i j;` is legal
     pub(crate) typedefs: Scope<InternedStr, ()>,
     /// we iterate lazily over the tokens, so if we have a program that's mostly valid but

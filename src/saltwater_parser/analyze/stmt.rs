@@ -99,7 +99,7 @@ impl FunctionAnalyzer<'_> {
             Decl(decls) => S::Decl(self.analyzer.parse_declaration(decls, stmt.location)),
         };
         let data = if !self.analyzer.decl_side_channel.is_empty() {
-            let decls = std::mem::replace(&mut self.analyzer.decl_side_channel, Vec::new());
+            let decls = std::mem::take(&mut self.analyzer.decl_side_channel);
             // this location is wrong for the declarations, but it's _probably_ fine
             let decl_stmt = Stmt::new(S::Decl(decls), stmt.location);
             S::Compound(vec![decl_stmt, Stmt::new(data, stmt.location)])
