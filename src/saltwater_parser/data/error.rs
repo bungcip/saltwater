@@ -192,8 +192,7 @@ pub enum SemanticError {
     #[error("expected integer, got '{0}'")]
     NonIntegralExpr(Type),
 
-    #[error("cannot implicitly convert '{0}' to '{1}'{}",
-        if .1.is_pointer() {
+    #[error("cannot implicitly convert '{0}' to '{1}'{message}", message = if .1.is_pointer() {
             format!(". help: use an explicit cast: ({})", .1)
         } else {
             String::new()
@@ -214,7 +213,7 @@ pub enum SemanticError {
     #[error("called object of type '{0}' is not a function")]
     NotAFunction(Type),
 
-    #[error("too {} arguments to function call: expected {0}, have {1}", if .1 > .0 { "many" } else { "few" })]
+    #[error("too {message} arguments to function call: expected {0}, have {1}", message= if .1 > .0 { "many" } else { "few" })]
     /// (actual, expected)
     WrongArgumentNumber(usize, usize),
 
@@ -331,7 +330,7 @@ pub enum SemanticError {
     #[error("redefinition of '{0}'")]
     Redefinition(InternedStr),
 
-    #[error("redeclaration of '{0}' with different type or qualifiers (originally {}, now {})", .1.get(), .2.get())]
+    #[error("redeclaration of '{0}' with different type or qualifiers (originally {old}, now {new})", old=.1.get(), new=.2.get())]
     IncompatibleRedeclaration(InternedStr, hir::Symbol, hir::Symbol),
 
     #[error("'{0}' can only appear on functions")]
@@ -572,8 +571,7 @@ pub enum Warning {
     #[error("'{0}' qualifier on return type has no effect")]
     FunctionQualifiersIgnored(hir::Qualifiers),
 
-    #[error("duplicate '{0}' declaration specifier{}",
-            if *.1 > 1 { format!(" occurs {} times", .1) } else { String::new() })]
+    #[error("duplicate '{0}' declaration specifier{message}", message = if *.1 > 1 { format!(" occurs {} times", .1) } else { String::new() })]
     DuplicateSpecifier(ast::UnitSpecifier, usize),
 
     #[error("qualifiers in type casts are ignored")]
