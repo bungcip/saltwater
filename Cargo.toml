@@ -45,7 +45,6 @@ time = {version="0.3", features = ["local-offset", "macros", "formatting", "std"
 [dev-dependencies]
 env_logger = { version = "0.11", default-features = false }
 log = "0.4.2"
-criterion = "0.5"
 walkdir = "2.5"
 proptest = "^1.5"
 proptest-derive = "0.5"

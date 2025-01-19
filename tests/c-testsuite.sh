@@ -11,17 +11,17 @@ cd c-testsuite
 cargo build --release
 TARGET="${CARGO_TARGET_DIR:-$ROOT/target}"
 
-cat > runners/single-exec/rcc << EOF
+cat > runners/single-exec/swcc << EOF
 #!/bin/sh
 
 set -eu
 
-CC="$TARGET/release/rcc"
+CC="$TARGET/release/swcc"
 CFLAGS=""
 
 export CC CFLAGS
 exec ./runners/single-exec/posix \$1
 EOF
 
-chmod +x runners/single-exec/rcc
-./single-exec rcc | scripts/tapsummary
+chmod +x runners/single-exec/swcc
+./single-exec swcc | scripts/tapsummary
