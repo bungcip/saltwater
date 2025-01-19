@@ -49,7 +49,7 @@ pub(crate) struct Parser<I: Lexer> {
 
 impl<I: Lexer> Parser<I> {
     /// Create a new parser over the tokens.
-    pub fn new(tokens: I, debug: bool) -> Self {
+    pub(crate) fn new(tokens: I, debug: bool) -> Self {
         Parser {
             typedefs: Default::default(),
             tokens: tokens.peekable(),
@@ -69,7 +69,7 @@ impl<I: Lexer> Parser<I> {
     ///
     /// This can be used if, for example, you call `parser.expr()`
     /// and want to see if there are any left-over tokens.
-    pub fn is_empty(&mut self) -> bool {
+    pub(crate) fn is_empty(&mut self) -> bool {
         self.peek_token().is_none()
     }
 }
@@ -336,7 +336,7 @@ impl<I: Lexer> Parser<I> {
     fn lex_error(&mut self, err: CompileError) {
         self.error_handler.push_back(err);
     }
-    pub fn collect_results(&mut self) -> (Vec<Locatable<ExternalDeclaration>>, Vec<CompileError>) {
+    pub(crate) fn collect_results(&mut self) -> (Vec<Locatable<ExternalDeclaration>>, Vec<CompileError>) {
         let mut decls = Vec::new();
         let mut errs = Vec::new();
         for result in self {
@@ -351,7 +351,7 @@ impl<I: Lexer> Parser<I> {
     ///
     /// These warnings are consumed and will not be returned if you call
     /// `warnings()` again.
-    pub fn warnings(&mut self) -> VecDeque<CompileWarning> {
+    pub(crate) fn warnings(&mut self) -> VecDeque<CompileWarning> {
         std::mem::take(&mut self.error_handler.warnings)
     }
 }

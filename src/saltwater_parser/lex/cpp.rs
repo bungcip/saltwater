@@ -681,7 +681,7 @@ impl<'a> PreProcessor<'a> {
     ///
     /// Note that identifiers are replaced with a constant 0,
     /// as per [6.10.1](http://port70.net/~nsz/c/c11/n1570.html#6.10.1p4).
-    pub fn cpp_expr<L>(
+    pub(crate) fn cpp_expr<L>(
         definitions: &Definitions,
         mut lex_tokens: L,
         location: Location,

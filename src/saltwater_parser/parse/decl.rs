@@ -41,7 +41,7 @@ impl<I: Lexer> Parser<I> {
     /// ;
     /// ```
     /// <http://www.quut.com/c/ANSI-C-grammar-y.html#external_declaration>
-    pub fn external_declaration(&mut self) -> SyntaxResult<Locatable<ExternalDeclaration>> {
+    pub(crate) fn external_declaration(&mut self) -> SyntaxResult<Locatable<ExternalDeclaration>> {
         let (specifiers, specifier_locations) = self.specifiers()?;
 
         // allow `int;`
@@ -108,7 +108,7 @@ impl<I: Lexer> Parser<I> {
             location,
         ))
     }
-    pub fn type_name(&mut self) -> SyntaxResult<Locatable<TypeName>> {
+    pub(crate) fn type_name(&mut self) -> SyntaxResult<Locatable<TypeName>> {
         use crate::saltwater_parser::ast::DeclaratorType;
 
         let (specifiers, specifier_locations) = self.specifiers()?;

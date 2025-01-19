@@ -30,7 +30,6 @@ pub use x64::*;
 
 impl StructType {
     /// Get the offset of the given struct member.
-    #[cfg_attr(not(feature = "codegen"), allow(dead_code))]
     pub(crate) fn offset(&self, member: InternedStr) -> u64 {
         let members = self.members();
         let mut current_offset = 0;
@@ -43,6 +42,7 @@ impl StructType {
         }
         unreachable!("cannot call struct_offset for member not in struct");
     }
+    
     /// Get the offset of the next struct member given the current offset.
     fn next_offset(mut current_offset: u64, ctype: &Type) -> Result<u64, &'static str> {
         let align = ctype.alignof()?;

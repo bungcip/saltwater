@@ -4,7 +4,7 @@ use crate::saltwater_parser::data::{hir::*, lex::ComparisonToken, *};
 use crate::saltwater_parser::intern::InternedStr;
 
 impl PureAnalyzer {
-    pub fn expr(&mut self, expr: ast::Expr) -> Expr {
+    pub(crate) fn expr(&mut self, expr: ast::Expr) -> Expr {
         use ast::ExprType::*;
 
         let _guard = self.recursion_check();

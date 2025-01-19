@@ -8,7 +8,7 @@ use crate::saltwater_parser::data::{
 type StmtResult = SyntaxResult<Stmt>;
 
 impl<I: Lexer> Parser<I> {
-    pub fn compound_statement(&mut self) -> SyntaxResult<Locatable<CompoundStatement>> {
+    pub(crate) fn compound_statement(&mut self) -> SyntaxResult<Locatable<CompoundStatement>> {
         let mut location = self
             .expect(Token::LeftBrace)
             .expect("compound_statement should be called with '{' as the next token")
@@ -68,7 +68,7 @@ impl<I: Lexer> Parser<I> {
     /// | DEFAULT ':' statement
     /// ;
     /// ```
-    pub fn statement(&mut self) -> SyntaxResult<Stmt> {
+    pub(crate) fn statement(&mut self) -> SyntaxResult<Stmt> {
         let _guard = self.recursion_check();
         // take out 2 guards since this goes through `compound_statement` before calling itself again
         let _guard2 = self.recursion_check();
