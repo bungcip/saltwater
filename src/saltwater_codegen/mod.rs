@@ -27,8 +27,7 @@ use cranelift::codegen::{
     ir::{
         entities::StackSlot,
         function::Function,
-        stackslot::{StackSlotData, StackSlotKind}, InstBuilder, MemFlags,
-    },
+        stackslot::{StackSlotData, StackSlotKind}, InstBuilder},
     isa::TargetIsa,
     settings::{self, Configurable, Flags},
 };
@@ -209,10 +208,7 @@ impl Compiler {
         match init {
             Initializer::Scalar(expr) => {
                 let val = self.compile_expr(*expr, builder)?;
-                // TODO: replace with `builder.ins().stack_store(val.ir_val, stack_slot, 0);`
-                // when Cranelift implements stack_store for i8 and i16
-                let addr = builder.ins().stack_addr(Type::ptr_type(), stack_slot, 0);
-                builder.ins().store(MemFlags::new(), val.ir_val, addr, 0);
+                builder.ins().stack_store(val.ir_val, stack_slot, 0);
             }
             Initializer::InitializerList(_) => unimplemented!("aggregate dynamic initialization"),
             Initializer::FunctionBody(_) => unreachable!("functions can't be stored on the stack"),
@@ -253,12 +249,7 @@ impl Compiler {
             };
             let stack_data = StackSlotData::new(StackSlotKind::ExplicitSlot, u32_size, 0);
             let slot = builder.create_sized_stack_slot(stack_data);
-            // TODO: need to take the address before storing until Cranelift implements
-            // stores for i8 and i16
-            // then this can be replaced with `builder.ins().stack_store(ir_val, slot, 0);`
-            // See https://github.com/CraneStation/cranelift/issues/433
-            let addr = builder.ins().stack_addr(Type::ptr_type(), slot, 0);
-            builder.ins().store(MemFlags::new(), ir_val, addr, 0);
+            builder.ins().stack_store(ir_val, slot, 0);
             self.declarations.insert(param, Id::Local(slot));
         }
         Ok(())
