@@ -15,10 +15,9 @@ mod files;
 pub mod replace;
 #[cfg(test)]
 mod tests;
-// https://github.com/rust-lang/rust/issues/64762
-#[allow(unreachable_pub)]
+
+
 pub use cpp::{PreProcessor, PreProcessorBuilder};
-#[allow(unreachable_pub)]
 pub use replace::{Definition, Peekable};
 
 type LexResult<T = Token> = Result<T, Locatable<LexError>>;

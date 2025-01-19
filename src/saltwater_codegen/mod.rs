@@ -35,8 +35,7 @@ use cranelift::codegen::{
 use cranelift::frontend::Switch;
 use cranelift::prelude::{Block, FunctionBuilder, FunctionBuilderContext};
 use cranelift_module::{self, DataId, FuncId, Linkage, Module};
-use cranelift_object::{ObjectBuilder};
-use cranelift_object::ObjectModule;
+use cranelift_object::{ObjectBuilder, ObjectModule};
 
 use crate::saltwater_parser::data::{
     hir::{Declaration, Initializer, Stmt, Symbol},

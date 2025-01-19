@@ -111,7 +111,7 @@ mod struct_ref {
 
     impl StructType {
         /// Get the members of a struct, regardless of which variant it is
-        pub fn members(&self) -> Rc<Vec<Variable>> {
+        pub(crate) fn members(&self) -> Rc<Vec<Variable>> {
             match self {
                 StructType::Anonymous(members) => Rc::clone(members),
                 StructType::Named(_, struct_ref) => struct_ref.get(),
@@ -124,7 +124,7 @@ mod struct_ref {
         ///
         /// For `Anonymous` structs, this occurs only when there has been a
         /// type error of some sort.
-        pub fn is_empty(&self) -> bool {
+        pub(crate) fn is_empty(&self) -> bool {
             match self {
                 StructType::Anonymous(members) => members.is_empty(),
                 StructType::Named(_, struct_ref) => struct_ref.get().is_empty(),

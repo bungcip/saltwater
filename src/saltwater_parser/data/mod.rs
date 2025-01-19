@@ -5,7 +5,7 @@ pub mod lex;
 pub mod types;
 
 pub use crate::saltwater_parser::intern::InternedStr;
-pub use error::{
+pub(crate) use error::{
     CompileError, CompileResult, CompileWarning, Error, ErrorHandler, SemanticError, SyntaxError,
 };
 pub use hir::LiteralValue;

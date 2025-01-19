@@ -1,7 +1,9 @@
 #![allow(clippy::cognitive_complexity)]
+#![allow(dead_code)] // some code is incorrectly marked as unused
+#![allow(unused_imports)] // some code is incorrectly marked as unused
 #![warn(absolute_paths_not_starting_with_crate)]
 #![warn(explicit_outlives_requirements)]
-#![warn(unreachable_pub)]
+// #![warn(unreachable_pub)]
 #![warn(deprecated_in_future)]
 #![deny(unsafe_code)]
 #![deny(unused_extern_crates)]
@@ -11,6 +13,7 @@ use std::io;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+use analyze::Analyzer;
 use arcstr::ArcStr;
 pub use codespan;
 
@@ -59,12 +62,10 @@ impl<T, E> Program<T, E> {
     }
 }
 
-pub use analyze::{Analyzer, PureAnalyzer};
-pub use data::*;
+// pub use analyze::{Analyzer, PureAnalyzer};
+pub(crate) use data::*;
 
-// https://github.com/rust-lang/rust/issues/64762
-#[allow(unreachable_pub)]
-pub use lex::{Definition, Lexer, PreProcessor, PreProcessorBuilder};
+pub use lex::{Definition, PreProcessor, PreProcessorBuilder};
 use parse::Parser;
 
 #[macro_use]
@@ -78,7 +79,7 @@ pub mod intern;
 mod lex;
 mod parse;
 
-pub use lex::replace;
+// pub use lex::replace;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -213,7 +214,7 @@ pub fn preprocess(buf: &str, opt: Opt) -> Program<VecDeque<Locatable<Token>>> {
 }
 
 /// Perform semantic analysis, including type checking and constant folding.
-pub fn check_semantics(buf: &str, opt: Opt) -> Program<Vec<Locatable<hir::Declaration>>> {
+pub(crate) fn check_semantics(buf: &str, opt: Opt) -> Program<Vec<Locatable<hir::Declaration>>> {
     let path = opt.search_path.iter().map(|p| p.into());
     let mut cpp = PreProcessor::new(buf, opt.filename, opt.debug_lex, path, opt.definitions);
 

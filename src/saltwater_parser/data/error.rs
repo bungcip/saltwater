@@ -18,7 +18,7 @@ pub type CompileWarning = Locatable<Warning>;
 /// part of the compiler, this cannot be represented well with Rust's normal
 /// `Result`.
 #[derive(Clone, Debug, PartialEq)]
-pub struct ErrorHandler<T = Error> {
+pub(crate) struct ErrorHandler<T = Error> {
     errors: VecDeque<Locatable<T>>,
     pub warnings: VecDeque<CompileWarning>,
 }
@@ -55,7 +55,7 @@ impl<T> ErrorHandler<T> {
     }
 
     /// Shortcut for adding a warning
-    pub fn warn<W: Into<Warning>>(&mut self, warning: W, location: Location) {
+    pub(crate) fn warn<W: Into<Warning>>(&mut self, warning: W, location: Location) {
         self.warnings.push_back(location.with(warning.into()));
     }
 
@@ -226,8 +226,8 @@ pub enum SemanticError {
     #[error("expected struct or union, got type '{0}'")]
     NotAStruct(Type),
 
-    #[error("cannot use '->' operator on type that is not a pointer")]
-    NotAStructPointer(Type),
+    // #[error("cannot use '->' operator on type that is not a pointer")]
+    // NotAStructPointer(Type),
 
     #[error("cannot dereference expression of non-pointer type '{0}'")]
     NotAPointer(Type),
@@ -379,8 +379,8 @@ pub enum SyntaxError {
     #[error("empty type name")]
     ExpectedType,
 
-    #[error("expected '(', '*', or variable, got '{0}'")]
-    ExpectedDeclaratorStart(Token),
+    // #[error("expected '(', '*', or variable, got '{0}'")]
+    // ExpectedDeclaratorStart(Token),
 
     #[error("only functions can have a function body (got {0})")]
     NotAFunction(ast::InitDeclarator),

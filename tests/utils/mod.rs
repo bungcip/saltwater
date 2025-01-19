@@ -41,7 +41,7 @@ pub fn compile_and_run(program: &str, path: PathBuf, args: &[&str]) -> Result<Ou
     run(&output, args).map_err(Error::IO)
 }
 
-pub fn compile(
+pub(crate) fn compile(
     program: &str,
     filename: PathBuf,
     no_link: bool,

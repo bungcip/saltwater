@@ -53,7 +53,7 @@ proptest-derive = "0.5"
 [features]
 default = ["color-backtrace"]
 # for internal use
-_test_headers = []
+#_test_headers = []
 
 [workspace]
 
@@ -71,7 +71,7 @@ name = "varargs"
 [[test]]
 name = "headers"
 # MacOS breaks if you pass -undef to the system preprocessor
-required-features = ["_test_header"]
+#required-features = ["_test_header"]
 
 [profile.release]
 lto = true

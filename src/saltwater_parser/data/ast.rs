@@ -5,7 +5,7 @@ use crate::saltwater_parser::data::hir::LiteralValue;
 use crate::saltwater_parser::data::lex::{AssignmentToken, ComparisonToken, Locatable};
 use crate::saltwater_parser::intern::InternedStr;
 
-pub type Program = Vec<Declaration>;
+// pub(crate) type Program = Vec<Declaration>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ExternalDeclaration {

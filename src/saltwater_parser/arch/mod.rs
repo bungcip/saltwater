@@ -23,10 +23,10 @@ const CHAR_SIZE: u16 = 1;
 /// Traditionaly, the target triple uses this format: `<architecture>-<vendor>-<operating system>`
 /// The target triple is represented as a struct and contains additional
 /// information like ABI and endianness.
-pub const TARGET: Triple = Triple::host();
+pub(crate) const TARGET: Triple = Triple::host();
 
 mod x64;
-pub use x64::*;
+pub(crate) use x64::*;
 
 impl StructType {
     /// Get the offset of the given struct member.
@@ -90,7 +90,7 @@ impl StructType {
 
 impl Type {
     /// Returns true if `other` can be converted to `self` without losing infomation.
-    pub fn can_represent(&self, other: &Type) -> bool {
+    pub(crate) fn can_represent(&self, other: &Type) -> bool {
         self == other
             || *self == Type::Double && *other == Type::Float
             || (self.is_integral() && other.is_integral())
@@ -101,7 +101,7 @@ impl Type {
     /// Get the size of a type in bytes.
     ///
     /// This is the `sizeof` operator in C.
-    pub fn sizeof(&self) -> Result<SIZE_T, &'static str> {
+    pub(crate) fn sizeof(&self) -> Result<SIZE_T, &'static str> {
         match self {
             Bool => Ok(BOOL_SIZE.into()),
             Char(_) => Ok(CHAR_SIZE.into()),
@@ -138,7 +138,7 @@ impl Type {
         }
     }
     /// Get the alignment of a type in bytes.
-    pub fn alignof(&self) -> Result<SIZE_T, &'static str> {
+    pub(crate) fn alignof(&self) -> Result<SIZE_T, &'static str> {
         match self {
             Bool
             | Char(_)

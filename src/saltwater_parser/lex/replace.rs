@@ -74,12 +74,12 @@ pub enum Definition {
     },
 }
 
-pub struct Replace<'a, I: Iterator> {
+pub(crate) struct Replace<'a, I: Iterator> {
     iter: std::iter::Peekable<I>,
     definitions: &'a Definitions,
 }
 
-pub fn replace_iter<I: Iterator>(iter: I, definitions: &Definitions) -> Replace<'_, I> {
+pub(crate) fn replace_iter<I: Iterator>(iter: I, definitions: &Definitions) -> Replace<'_, I> {
     Replace {
         iter: iter.peekable(),
         definitions,
@@ -154,7 +154,7 @@ impl<I: Iterator<Item = CompileResult<Locatable<Token>>>> Iterator for Replace<'
 ///
 /// `location` is used only for errors; in all other cases it is ignored.
 #[must_use = "does not change internal state"]
-pub fn replace(
+pub(crate) fn replace(
     definitions: &Definitions,
     token: Token,
     mut inner: impl Iterator<Item = CppResult<Token>> + Peekable,

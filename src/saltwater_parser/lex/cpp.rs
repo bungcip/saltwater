@@ -215,7 +215,7 @@ enum IfState {
     Else,
 }
 
-pub(super) type CppResult<T> = Result<Locatable<T>, CompileError>;
+pub(crate) type CppResult<T> = Result<Locatable<T>, CompileError>;
 
 impl Iterator for PreProcessor<'_> {
     /// The preprocessor hides all internal complexity and returns only tokens.
@@ -1139,7 +1139,7 @@ impl<'a> PreProcessor<'a> {
     }
 
     /// Returns next token in stream which is not whitespace
-    pub fn next_non_whitespace(&mut self) -> Option<CppResult<Token>> {
+    pub(crate) fn next_non_whitespace(&mut self) -> Option<CppResult<Token>> {
         loop {
             match self.next() {
                 Some(Ok(Locatable {

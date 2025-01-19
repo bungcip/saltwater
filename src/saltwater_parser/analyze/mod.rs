@@ -27,7 +27,7 @@ pub(crate) enum TagEntry {
 /// This implements `Iterator` and ensures that declarations and errors are returned in the correct error.
 /// Use this if you want to compile an entire C program,
 /// or if it is important to show errors in the correct order relative to declarations.
-pub struct Analyzer<T: Lexer> {
+pub(crate) struct Analyzer<T: Lexer> {
     declarations: Parser<T>,
     pub inner: PureAnalyzer,
     /// Whether to print each declaration as it is seen
@@ -40,7 +40,7 @@ pub struct Analyzer<T: Lexer> {
 /// Use this if you need to analyze a specific AST data type without parsing a whole program.
 
 // The struct is used mostly for holding scopes and error handler.
-pub struct PureAnalyzer {
+pub(crate) struct PureAnalyzer {
     // in case a `Declaration` has multiple declarators
     pending: VecDeque<Locatable<Declaration>>,
     /// objects that are in scope
@@ -104,7 +104,7 @@ impl<T: Lexer> Iterator for Analyzer<T> {
 }
 
 impl<I: Lexer> Analyzer<I> {
-    pub fn new(parser: Parser<I>, debug: bool) -> Self {
+    pub(crate) fn new(parser: Parser<I>, debug: bool) -> Self {
         Self {
             declarations: parser,
             debug,
@@ -120,7 +120,7 @@ impl Default for PureAnalyzer {
 }
 
 impl PureAnalyzer {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             error_handler: ErrorHandler::new(),
             scope: Scope::new(),
@@ -136,7 +136,7 @@ impl PureAnalyzer {
     ///
     /// These warnings are consumed and will not be returned if you call
     /// `warnings()` again.
-    pub fn warnings(&mut self) -> VecDeque<CompileWarning> {
+    pub(crate) fn warnings(&mut self) -> VecDeque<CompileWarning> {
         std::mem::take(&mut self.error_handler.warnings)
     }
     // I type these a lot
