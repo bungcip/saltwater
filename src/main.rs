@@ -1,5 +1,5 @@
-mod saltwater_parser;
 mod saltwater_codegen;
+mod saltwater_parser;
 
 use std::collections::VecDeque;
 use std::fs::File;
@@ -9,17 +9,17 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use crate::saltwater_parser::Location;
 use ansi_term::{ANSIString, Colour};
 use arcstr::ArcStr;
 use pico_args::Arguments;
 use saltwater_codegen::{assemble, compile, link};
-use saltwater_parser::{Opt, Files, CompileWarning};
-use crate::saltwater_parser::Location;
+use saltwater_parser::{CompileWarning, Files, Opt};
 // use saltwater_parser::data::{error::CompileWarning, Location};
 // use saltwater_parser::{preprocess, Error, Files, Opt, Program};
 use tempfile::NamedTempFile;
 
-use crate::saltwater_parser::{Error, Program, preprocess};
+use crate::saltwater_parser::{preprocess, Error, Program};
 
 static ERRORS: AtomicUsize = AtomicUsize::new(0);
 static WARNINGS: AtomicUsize = AtomicUsize::new(0);
@@ -140,19 +140,15 @@ fn real_main(buf: ArcStr, bin_opt: BinOpt, output: &Path) -> Result<(), (Error, 
     } else {
         bin_opt.opt
     };
-    
-    aot_main(&buf, opt, output, bin_opt.color)
-}
 
-#[inline]
-fn aot_main(buf: &str, opt: Opt, output: &Path, color: ColorChoice) -> Result<(), (Error, Files)> {
+    let color = bin_opt.color;
     let no_link = opt.no_link;
     let module = saltwater_codegen::initialize_aot_module("saltwater_main".to_owned());
     let Program {
         result,
         warnings,
         files,
-    } = compile(module, buf, opt);
+    } = compile(module, &buf, opt);
     handle_warnings(warnings, &files, color);
 
     let product = sw_try!(result.map(|x| x.finish()), files);
@@ -168,7 +164,7 @@ fn aot_main(buf: &str, opt: Opt, output: &Path, color: ColorChoice) -> Result<()
 
 fn handle_warnings(warnings: VecDeque<CompileWarning>, file_db: &Files, color: ColorChoice) {
     WARNINGS.fetch_add(warnings.len(), Ordering::Relaxed);
-    
+
     let warn = "warning";
     let tag = if color.use_color_for(atty::Stream::Stdout) {
         Colour::Yellow.bold().paint(warn)
@@ -321,8 +317,7 @@ fn parse_args() -> Result<(BinOpt, PathBuf), pico_args::Error> {
             search_path,
             // This is a little odd because `free` expects no arguments to be left,
             // so we have to parse it last.
-            filename: input
-                .free_from_fn(str_to_path_buf)?
+            filename: input.free_from_fn(str_to_path_buf)?,
         },
         color: color_choice,
     };
@@ -461,12 +456,11 @@ mod backtrace {
     }
 }
 
-
 #[cfg(test)]
 mod test {
-    use crate::saltwater_parser;
     use super::saltwater_parser::Files;
     use super::saltwater_parser::Location;
+    use crate::saltwater_parser;
 
     use ansi_term::Style;
     use saltwater_parser::data::lex::Span;
