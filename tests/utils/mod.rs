@@ -47,9 +47,7 @@ pub(crate) fn compile(program: &str, filename: PathBuf, no_link: bool) -> Result
         ..Default::default()
     };
     let module = initialize_aot_module(program.to_owned());
-    let module = saltwater::codegen::compile(module, program, opts)
-        .result?
-        .finish();
+    let module = saltwater::codegen::compile(module, program, opts).result?.finish();
     let output = tempfile::NamedTempFile::new()
         .expect("cannot create tempfile")
         .into_temp_path();
