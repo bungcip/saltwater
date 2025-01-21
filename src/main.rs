@@ -1,4 +1,4 @@
-mod saltwater_codegen;
+mod codegen;
 mod saltwater_parser;
 
 use std::collections::VecDeque;
@@ -13,7 +13,7 @@ use crate::saltwater_parser::Location;
 use ansi_term::{ANSIString, Colour};
 use arcstr::ArcStr;
 use pico_args::Arguments;
-use saltwater_codegen::{assemble, compile, link};
+use codegen::{assemble, compile, link};
 use saltwater_parser::{CompileWarning, Files, Opt};
 // use saltwater_parser::data::{error::CompileWarning, Location};
 // use saltwater_parser::{preprocess, Error, Files, Opt, Program};
@@ -149,7 +149,7 @@ fn real_main(buf: ArcStr, bin_opt: BinOpt, output: &Path) -> Result<(), (Error, 
 
     let color = bin_opt.color;
     let no_link = opt.no_link;
-    let module = saltwater_codegen::initialize_aot_module("saltwater_main".to_owned());
+    let module = codegen::initialize_aot_module("saltwater_main".to_owned());
     let Program {
         result,
         warnings,
