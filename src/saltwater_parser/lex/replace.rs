@@ -4,8 +4,7 @@
 
 use super::{cpp::CppResult, files::FileProcessor};
 use crate::saltwater_parser::{
-    error::CppError, CompileError, CompileResult, InternedStr, LiteralToken, Locatable, Location,
-    Token,
+    error::CppError, CompileError, CompileResult, InternedStr, LiteralToken, Locatable, Location, Token,
 };
 use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -91,12 +90,7 @@ impl<I: Iterator<Item = CompileResult<Locatable<Token>>>> Iterator for Replace<'
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
-            Some(Ok(t)) => Some(replace(
-                self.definitions,
-                t.data,
-                &mut self.iter,
-                t.location,
-            )),
+            Some(Ok(t)) => Some(replace(self.definitions, t.data, &mut self.iter, t.location)),
             Some(Err(err)) => Some(vec![Err(err)]),
             None => None,
         }
@@ -174,8 +168,7 @@ pub(crate) fn replace(
     while let Some(token) = pending.pop_front() {
         // first step: perform (recursive) substitution on the ID
         if let Ok(Locatable {
-            data: Token::Id(id),
-            ..
+            data: Token::Id(id), ..
         }) = token
         {
             if !ids_seen.contains(&id) {
@@ -192,12 +185,7 @@ pub(crate) fn replace(
                         // should replace to `1 + 2 c d`, not `c d 1 + 2`
                         let mut new_pending = VecDeque::new();
                         // we need a `clone()` because `self.definitions` needs to keep its copy of the definition
-                        new_pending.extend(
-                            replacement_list
-                                .iter()
-                                .cloned()
-                                .map(|t| Ok(location.with(t))),
-                        );
+                        new_pending.extend(replacement_list.iter().cloned().map(|t| Ok(location.with(t))));
                         new_pending.append(&mut pending);
                         pending = new_pending;
                         continue;
@@ -205,10 +193,8 @@ pub(crate) fn replace(
                     // TODO: so many allocations :(
                     Some(Definition::Function { .. }) => {
                         ids_seen.insert(id);
-                        let func_replacements =
-                            replace_function(definitions, id, location, &mut pending, &mut inner);
-                        let mut func_replacements: VecDeque<_> =
-                            func_replacements.into_iter().collect();
+                        let func_replacements = replace_function(definitions, id, location, &mut pending, &mut inner);
+                        let mut func_replacements: VecDeque<_> = func_replacements.into_iter().collect();
                         func_replacements.append(&mut pending);
                         pending = func_replacements;
                         continue;
@@ -246,8 +232,7 @@ fn replace_function(
             }
             // f (
             Some(Ok(Locatable {
-                data: Token::LeftParen,
-                ..
+                data: Token::LeftParen, ..
             })) => {
                 // pop off the `(` so it isn't counted as part of the first argument
                 if incoming.pop_front().is_none() {
@@ -264,8 +249,7 @@ fn replace_function(
                 let spaces = incoming.pop_front().or_else(|| inner.next()).unwrap();
                 let left_paren = incoming.front().or_else(|| inner.peek());
                 if let Some(Ok(Locatable {
-                    data: Token::LeftParen,
-                    ..
+                    data: Token::LeftParen, ..
                 })) = left_paren
                 {
                     if incoming.pop_front().is_none() {

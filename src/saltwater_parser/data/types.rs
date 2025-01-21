@@ -285,11 +285,7 @@ fn write_struct_type(struct_type: &StructType, f: &mut Formatter) -> fmt::Result
     Ok(())
 }
 
-pub(super) fn print_type(
-    ctype: &Type,
-    name: Option<InternedStr>,
-    f: &mut Formatter,
-) -> fmt::Result {
+pub(super) fn print_type(ctype: &Type, name: Option<InternedStr>, f: &mut Formatter) -> fmt::Result {
     fn unroll_type(ctype: &Type) -> Vec<&Type> {
         let mut types = Vec::new();
         let mut next_type = ctype;
@@ -454,8 +450,7 @@ pub(crate) mod tests {
 
         leaf.prop_recursive(8, 256, 10, |inner| {
             prop_oneof![
-                (inner.clone(), any::<Qualifiers>())
-                    .prop_map(|(t, q)| Type::Pointer(Box::new(t), q)),
+                (inner.clone(), any::<Qualifiers>()).prop_map(|(t, q)| Type::Pointer(Box::new(t), q)),
                 (inner, any::<ArrayType>()).prop_map(|(t, at)| Type::Array(Box::new(t), at)),
                 //Type::Function(FunctionType),
                 //Type::Union(StructType),

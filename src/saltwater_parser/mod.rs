@@ -201,11 +201,7 @@ pub fn preprocess(buf: &str, opt: Opt) -> Program<VecDeque<Locatable<Token>>> {
             Err(err) => errs.push_back(err),
         }
     }
-    let result = if errs.is_empty() {
-        Ok(tokens)
-    } else {
-        Err(errs)
-    };
+    let result = if errs.is_empty() { Ok(tokens) } else { Err(errs) };
     Program {
         result,
         warnings: cpp.warnings(),

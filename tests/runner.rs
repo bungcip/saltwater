@@ -105,21 +105,14 @@ fn run_one(path: &path::Path) -> Result<(), io::Error> {
 /// // string
 /// // END
 /// ```
-fn output_test<B: BufRead>(
-    line: &str,
-    reader: &mut B,
-    program: &str,
-    path: path::PathBuf,
-) -> Result<(), io::Error> {
+fn output_test<B: BufRead>(line: &str, reader: &mut B, program: &str, path: path::PathBuf) -> Result<(), io::Error> {
     const BEGIN: &str = "BEGIN: ";
     const END: &str = "END";
     let tmp_str;
     let expected = match line {
         "" => "", // special case this so empty output doesn't need to use 'BEGIN: END'
         // everything between BEGIN: (...) END
-        _ if line.starts_with(BEGIN) && line.ends_with(END) => {
-            &line[BEGIN.len()..line.len() - END.len() - 1]
-        }
+        _ if line.starts_with(BEGIN) && line.ends_with(END) => &line[BEGIN.len()..line.len() - END.len() - 1],
         // special case initial lines that are empty
         "BEGIN:" => {
             tmp_str = state_machine(reader)?;

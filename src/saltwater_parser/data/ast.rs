@@ -359,9 +359,7 @@ impl Display for DeclarationSpecifier {
 
         match self {
             Unit(u) => write!(f, "{}", u),
-            Enum {
-                name: Some(ident), ..
-            } => write!(f, "enum {}", ident),
+            Enum { name: Some(ident), .. } => write!(f, "enum {}", ident),
             // error, but caught later
             Enum {
                 name: None,
@@ -444,9 +442,7 @@ impl DeclaratorType {
             next_type = match next_type {
                 DeclaratorType::Array { of: next, .. }
                 | DeclaratorType::Pointer { to: next, .. }
-                | DeclaratorType::Function(FunctionDeclarator {
-                    return_type: next, ..
-                }) => next.as_ref(),
+                | DeclaratorType::Function(FunctionDeclarator { return_type: next, .. }) => next.as_ref(),
                 DeclaratorType::End => break,
             };
         }
@@ -584,11 +580,9 @@ impl StmtType {
             StmtType::Label(id, inner) => write!(f, "{}: {}", id, inner.data),
             StmtType::While(condition, body) => write!(f, "while ({}) {}", condition, body.data),
             StmtType::If(condition, body, None) => write!(f, "if ({}) {}", condition, body.data),
-            StmtType::If(condition, body, Some(otherwise)) => write!(
-                f,
-                "if ({}) {} else {}",
-                condition, body.data, otherwise.data
-            ),
+            StmtType::If(condition, body, Some(otherwise)) => {
+                write!(f, "if ({}) {} else {}", condition, body.data, otherwise.data)
+            }
             StmtType::Do(body, condition) => write!(f, "do {} while ({});", body.data, condition),
             StmtType::For {
                 initializer: decls,

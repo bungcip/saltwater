@@ -37,12 +37,12 @@ impl StructType {
             if formal.id == member {
                 return current_offset;
             }
-            current_offset = Self::next_offset(current_offset, &formal.ctype)
-                .expect("structs should have valid size and alignment");
+            current_offset =
+                Self::next_offset(current_offset, &formal.ctype).expect("structs should have valid size and alignment");
         }
         unreachable!("cannot call struct_offset for member not in struct");
     }
-    
+
     /// Get the offset of the next struct member given the current offset.
     fn next_offset(mut current_offset: u64, ctype: &Type) -> Result<u64, &'static str> {
         let align = ctype.alignof()?;
@@ -60,9 +60,7 @@ impl StructType {
 
         symbols
             .iter()
-            .try_fold(0, |offset, symbol| {
-                StructType::next_offset(offset, &symbol.ctype)
-            })
+            .try_fold(0, |offset, symbol| StructType::next_offset(offset, &symbol.ctype))
             .and_then(|size_t| {
                 let align_minus_one = self.align()? - 1;
 
@@ -82,9 +80,9 @@ impl StructType {
     /// Calculate the alignment of a struct: the max of all member alignments
     pub(crate) fn align(&self) -> Result<SIZE_T, &'static str> {
         let members = &self.members();
-        members.iter().try_fold(0, |max, member| {
-            Ok(std::cmp::max(member.ctype.alignof()?, max))
-        })
+        members
+            .iter()
+            .try_fold(0, |max, member| Ok(std::cmp::max(member.ctype.alignof()?, max)))
     }
 }
 
@@ -140,15 +138,7 @@ impl Type {
     /// Get the alignment of a type in bytes.
     pub(crate) fn alignof(&self) -> Result<SIZE_T, &'static str> {
         match self {
-            Bool
-            | Char(_)
-            | Short(_)
-            | Int(_)
-            | Long(_)
-            | Float
-            | Double
-            | Pointer(_, _)
-            | Enum(_, _) => self.sizeof(),
+            Bool | Char(_) | Short(_) | Int(_) | Long(_) | Float | Double | Pointer(_, _) | Enum(_, _) => self.sizeof(),
             Array(t, _) => t.alignof(),
             // Clang uses the largest alignment of any element as the alignment of the whole
             // Not sure why, but who am I to argue
@@ -198,10 +188,7 @@ mod tests {
         let members = {
             let mut v = vec![];
             for (i, ctype) in types.into_iter().enumerate() {
-                v.push(symbol_for_type(
-                    ctype,
-                    InternedStr::get_or_intern(i.to_string()),
-                ));
+                v.push(symbol_for_type(ctype, InternedStr::get_or_intern(i.to_string())));
             }
             v
         };
@@ -259,10 +246,7 @@ mod tests {
     }
     #[test]
     fn align_of_non_char_struct() {
-        let ty = struct_for_types(vec![
-            Pointer(Box::new(Int(true)), Qualifiers::default()),
-            Int(true),
-        ]);
+        let ty = struct_for_types(vec![Pointer(Box::new(Int(true)), Qualifiers::default()), Int(true)]);
         assert_eq!(ty.alignof(), Ok(8));
     }
 

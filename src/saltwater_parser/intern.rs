@@ -76,9 +76,7 @@ impl InternedStr {
         InternedStr(
             STRINGS
                 .write()
-                .expect(
-                    "failed to lock String cache for writing, another thread must have panicked",
-                )
+                .expect("failed to lock String cache for writing, another thread must have panicked")
                 .get_or_intern(val),
         )
     }

@@ -158,7 +158,9 @@ pub enum SemanticError {
     IllegalReturnType(Type),
 
     // TODO: print params in the error message
-    #[error("arrays cannot contain functions (got '{0}'). help: try storing array of pointer to function: (*{0}[])(...)")]
+    #[error(
+        "arrays cannot contain functions (got '{0}'). help: try storing array of pointer to function: (*{0}[])(...)"
+    )]
     ArrayStoringFunction(Type),
 
     #[error("void must be the first and only parameter if specified")]
@@ -228,7 +230,6 @@ pub enum SemanticError {
 
     // #[error("cannot use '->' operator on type that is not a pointer")]
     // NotAStructPointer(Type),
-
     #[error("cannot dereference expression of non-pointer type '{0}'")]
     NotAPointer(Type),
 
@@ -381,7 +382,6 @@ pub enum SyntaxError {
 
     // #[error("expected '(', '*', or variable, got '{0}'")]
     // ExpectedDeclaratorStart(Token),
-
     #[error("only functions can have a function body (got {0})")]
     NotAFunction(ast::InitDeclarator),
 
@@ -716,10 +716,7 @@ mod tests {
 
     #[test]
     fn test_compile_error_display() {
-        assert_eq!(
-            dummy_error().data.to_string(),
-            "invalid token: unterminated /* comment"
-        );
+        assert_eq!(dummy_error().data.to_string(), "invalid token: unterminated /* comment");
 
         assert_eq!(
             Error::Semantic(SemanticError::Generic("bad code".to_string())).to_string(),

@@ -26,7 +26,7 @@ pub fn cpp() -> std::process::Command {
         "-D__FLT_MIN__=1.175494350822287507e-38F",
         "-D__INTPTR_TYPE__=8",
         "-D__INT32_TYPE__=4",
-        #[cfg(target_os="linux")]
+        #[cfg(target_os = "linux")]
         "-D__linux__",
         #[cfg(target_arch = "x86_64")]
         "-D__x86_64__",
@@ -35,17 +35,13 @@ pub fn cpp() -> std::process::Command {
 }
 
 pub fn compile_and_run(program: &str, path: PathBuf, args: &[&str]) -> Result<Output, Error> {
-    let output = compile(program, path, false)
-        .unwrap_or_else(|err| panic!("failed to compile program '{}': {}", program, err));
+    let output =
+        compile(program, path, false).unwrap_or_else(|err| panic!("failed to compile program '{}': {}", program, err));
     info!("running file {:?}", output);
     run(&output, args).map_err(Error::IO)
 }
 
-pub(crate) fn compile(
-    program: &str,
-    filename: PathBuf,
-    no_link: bool,
-) -> Result<tempfile::TempPath, Error> {
+pub(crate) fn compile(program: &str, filename: PathBuf, no_link: bool) -> Result<tempfile::TempPath, Error> {
     let opts = Opt {
         filename,
         ..Default::default()
@@ -76,20 +72,12 @@ pub fn run(program: &Path, args: &[&str]) -> Result<Output, std::io::Error> {
 }
 
 pub fn assert_compiles(program: &str, path: PathBuf) {
-    assert!(
-        compile(program, path, true).is_err(),
-        "{} failed to compile",
-        program
-    );
+    assert!(compile(program, path, true).is_err(), "{} failed to compile", program);
 }
 
 pub fn assert_compiles_no_main(fragment: &str, path: PathBuf) {
     let program = format!("int main() {{}}\n{}", fragment);
-    assert!(
-        compile(&program, path, true).is_ok(),
-        "{} failed to compile",
-        fragment
-    );
+    assert!(compile(&program, path, true).is_ok(), "{} failed to compile", fragment);
 }
 
 pub fn assert_compile_error(program: &str, path: PathBuf) {
@@ -107,9 +95,7 @@ pub fn assert_crash(program: &str, path: PathBuf) {
     let output = compile(program, path, false).expect("could not compile program");
     log::debug!("running compiled program at {:?}", output);
     let path: &Path = output.as_ref();
-    let mut handle = Command::new(path)
-        .spawn()
-        .expect("could not start compiled program");
+    let mut handle = Command::new(path).spawn().expect("could not start compiled program");
     #[cfg(unix)]
     {
         use std::os::unix::process::ExitStatusExt;

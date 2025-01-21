@@ -16,7 +16,6 @@ pub mod replace;
 #[cfg(test)]
 mod tests;
 
-
 pub use cpp::{PreProcessor, PreProcessorBuilder};
 pub use replace::{Definition, Peekable};
 
@@ -118,10 +117,8 @@ impl Lexer {
 
     fn slice(&self, span_start: u32) -> Substr {
         use std::ops::Range;
-        self.chars.substr_using(|s| {
-            s.get::<Range<usize>>(self.span(span_start).span.into())
-                .unwrap_or("")
-        })
+        self.chars
+            .substr_using(|s| s.get::<Range<usize>>(self.span(span_start).span.into()).unwrap_or(""))
     }
 
     /// Parse a number literal, given the starting character and whether floats are allowed.
@@ -152,9 +149,7 @@ impl Lexer {
                 Radix::Hexadecimal
             } else if self.match_next('.') {
                 // float: 0.431
-                return self
-                    .parse_float(Radix::Decimal, span_start)
-                    .map(float_literal);
+                return self.parse_float(Radix::Decimal, span_start).map(float_literal);
             } else {
                 // octal: 0755 => 493
                 Radix::Octal
@@ -216,8 +211,7 @@ impl Lexer {
     }
     // should only be called at the end of a number. mostly error handling
     fn parse_exponent(&mut self, hex: bool) -> Result<(), LexError> {
-        let is_digit =
-            |c: Option<char>| c.map_or(false, |c| c.is_ascii_digit() || c == '+' || c == '-');
+        let is_digit = |c: Option<char>| c.map_or(false, |c| c.is_ascii_digit() || c == '+' || c == '-');
         if hex {
             if self.match_next('p') || self.match_next('P') {
                 if !is_digit(self.peek()) {
@@ -335,8 +329,7 @@ impl Iterator for Lexer {
             // TODO: this is awful
             if this.location.offset as usize == this.chars.len() && !this.chars.ends_with('\n') {
                 let location = this.span(this.chars.len() as u32);
-                this.error_handler
-                    .push_back(location.with(LexError::NoNewlineAtEOF));
+                this.error_handler.push_back(location.with(LexError::NoNewlineAtEOF));
             }
         };
 
@@ -488,17 +481,15 @@ impl Iterator for Lexer {
                 ';' => Token::Semicolon,
                 ',' => Token::Comma,
                 '.' => match self.peek() {
-                    Some(c) if c.is_ascii_digit() => {
-                        match self.parse_float(Radix::Decimal, span_start) {
-                            Ok(f) => LiteralToken::Float(f).into(),
-                            Err(err) => {
-                                return Err(Locatable {
-                                    data: err,
-                                    location: self.span(span_start),
-                                });
-                            }
+                    Some(c) if c.is_ascii_digit() => match self.parse_float(Radix::Decimal, span_start) {
+                        Ok(f) => LiteralToken::Float(f).into(),
+                        Err(err) => {
+                            return Err(Locatable {
+                                data: err,
+                                location: self.span(span_start),
+                            });
                         }
-                    }
+                    },
                     Some('.') => {
                         if self.peek_next() == Some('.') {
                             self.next_char();
@@ -540,9 +531,7 @@ impl Iterator for Lexer {
                     }
                 },
                 x => {
-                    return Err(self
-                        .span(span_start)
-                        .with(LexError::UnknownToken(x)));
+                    return Err(self.span(span_start).with(LexError::UnknownToken(x)));
                 }
             };
             // We've seen a token if this isn't # or whitespace
@@ -761,10 +750,7 @@ pub(crate) trait LiteralParser {
     fn parse_string_raw(&mut self, start_quote: bool) -> Result<Vec<u8>, LexError> {
         let mut literal = Vec::new();
         if start_quote {
-            assert!(matches!(
-                self.parse_single_char(true),
-                Err(CharError::Terminator)
-            ));
+            assert!(matches!(self.parse_single_char(true), Err(CharError::Terminator)));
         }
         loop {
             match self.parse_single_char(true) {
@@ -806,18 +792,15 @@ pub(crate) trait LiteralParser {
     ///
     /// Before: b"    // some comment\n /*multi comment*/hello   "
     /// After:  b"hello   "
-    fn consume_whitespace_full(
-        &mut self,
-        stop_at_newline: bool,
-        comments_newlines: bool,
-    ) -> String {
+    fn consume_whitespace_full(&mut self, stop_at_newline: bool, comments_newlines: bool) -> String {
         // there may be comments following whitespace
         let mut whitespace = String::new();
         loop {
             // whitespace
-            while self.peek().map_or(false, |c| {
-                c.is_ascii_whitespace() && !(stop_at_newline && c == '\n')
-            }) {
+            while self
+                .peek()
+                .map_or(false, |c| c.is_ascii_whitespace() && !(stop_at_newline && c == '\n'))
+            {
                 if let Some(c) = self.next_char() {
                     whitespace.push(c);
                 }
@@ -1003,15 +986,10 @@ impl LiteralToken {
     pub(crate) fn parse(self) -> Result<LiteralValue, SyntaxError> {
         match self {
             LiteralToken::Int(rcstr) => Ok(LiteralValue::Int(
-                i64::try_from(parse_int_raw(rcstr.as_str())?).map_err(|_| {
-                    SyntaxError::IntegerOverflow {
-                        is_signed: Some(true),
-                    }
-                })?,
+                i64::try_from(parse_int_raw(rcstr.as_str())?)
+                    .map_err(|_| SyntaxError::IntegerOverflow { is_signed: Some(true) })?,
             )),
-            LiteralToken::UnsignedInt(rcstr) => {
-                Ok(LiteralValue::UnsignedInt(parse_int_raw(rcstr.as_str())?))
-            }
+            LiteralToken::UnsignedInt(rcstr) => Ok(LiteralValue::UnsignedInt(parse_int_raw(rcstr.as_str())?)),
             LiteralToken::Float(rcstr) => {
                 let buf = rcstr.as_str();
                 let hex = buf.starts_with("0x");
@@ -1035,8 +1013,7 @@ impl LiteralToken {
                     strs.iter()
                         .enumerate()
                         .flat_map(|(i, s)| {
-                            let mut s =
-                                PseudoLexer::new(s.as_str()).parse_string_raw(true).unwrap();
+                            let mut s = PseudoLexer::new(s.as_str()).parse_string_raw(true).unwrap();
                             if i + 1 != num_strs {
                                 assert_eq!(s.pop().unwrap(), 0);
                             }
@@ -1046,9 +1023,7 @@ impl LiteralToken {
                 ))
             }
             LiteralToken::Char(rcstr) => Ok(LiteralValue::Char(
-                PseudoLexer::new(rcstr.as_str())
-                    .parse_char_raw(true)
-                    .unwrap(),
+                PseudoLexer::new(rcstr.as_str()).parse_char_raw(true).unwrap(),
             )),
         }
     }

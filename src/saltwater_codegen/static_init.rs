@@ -4,19 +4,19 @@
 use std::convert::{TryFrom, TryInto};
 
 use cranelift::codegen::ir::types;
-use cranelift_module::{DataId, Linkage, DataDescription};
 use cranelift_module::Module;
+use cranelift_module::{DataDescription, DataId, Linkage};
 
 use crate::saltwater_parser;
 
 use super::{Compiler, Id};
+use crate::const_assert;
 use saltwater_parser::arch::{PTR_SIZE, TARGET};
 use saltwater_parser::data::{
     hir::{Expr, ExprType, Initializer, LiteralValue, Symbol},
     types::ArrayType,
     StorageClass, *,
 };
-use crate::const_assert;
 
 const_assert!(PTR_SIZE <= std::usize::MAX as u16);
 const ZERO_PTR: [u8; PTR_SIZE as usize] = [0; PTR_SIZE as usize];
@@ -26,10 +26,7 @@ macro_rules! cast {
         let cast = $i as $to;
         if cast as $from != $i {
             $handler.warn(
-                &format!(
-                    "conversion to {} loses precision ({} != {})",
-                    $ctype, cast as $from, $i
-                ),
+                &format!("conversion to {} loses precision ({} != {})", $ctype, cast as $from, $i),
                 $location,
             )
         }
@@ -60,10 +57,7 @@ impl Compiler {
         if let StorageClass::Typedef = metadata.storage_class {
             return Ok(());
         }
-        let err_closure = |err| Locatable {
-            data: err,
-            location,
-        };
+        let err_closure = |err| Locatable { data: err, location };
         // let align = metadata
         //     .ctype
         //     .alignof()
@@ -80,12 +74,7 @@ impl Compiler {
         let linkage = linkage_from_storage_class(metadata.storage_class).map_err(err_closure)?;
         let id = self
             .module
-            .declare_data(
-                get_str!(metadata.id),
-                linkage,
-                !metadata.qualifiers.c_const,
-                false,
-            )
+            .declare_data(get_str!(metadata.id), linkage, !metadata.qualifiers.c_const, false)
             .map_err(|err| Locatable {
                 data: format!("error storing static value: {}", err),
                 location,
@@ -126,12 +115,7 @@ impl Compiler {
             self.init_symbol(&mut ctx, &mut buf, offset, init, &ctype, &location)?;
             ctx.define(buf.into_boxed_slice());
         } else {
-            ctx.define_zeroinit(
-                metadata
-                    .ctype
-                    .sizeof()
-                    .map_err(|err| err_closure(err.to_string()))? as usize,
-            );
+            ctx.define_zeroinit(metadata.ctype.sizeof().map_err(|err| err_closure(err.to_string()))? as usize);
         };
         self.module.define_data(id, &ctx).map_err(|err| {
             CompileError::semantic(Locatable {
@@ -140,11 +124,7 @@ impl Compiler {
             })
         })
     }
-    pub(super) fn compile_string(
-        &mut self,
-        string: Vec<u8>,
-        location: Location,
-    ) -> CompileResult<DataId> {
+    pub(super) fn compile_string(&mut self, string: Vec<u8>, location: Location) -> CompileResult<DataId> {
         use std::collections::hash_map::Entry;
         let len = self.strings.len();
         // TODO: it seems silly for both us and cranelift to store the string
@@ -152,10 +132,7 @@ impl Compiler {
             Entry::Occupied(id) => return Ok(*id.get()),
             Entry::Vacant(empty) => {
                 let name = format!("str.{}", len);
-                let id = match self
-                    .module
-                    .declare_data(&name, Linkage::Local, false, false)
-                {
+                let id = match self.module.declare_data(&name, Linkage::Local, false, false) {
                     Ok(id) => id,
                     Err(err) => {
                         semantic_err!(format!("error declaring static string: {}", err), location)
@@ -168,21 +145,13 @@ impl Compiler {
         };
         let mut ctx = DataDescription::new();
         ctx.define(string.into_boxed_slice());
-        self.module
-            .define_data(str_id, &ctx)
-            .map_err(|err| Locatable {
-                data: format!("error defining static string: {}", err),
-                location,
-            })?;
+        self.module.define_data(str_id, &ctx).map_err(|err| Locatable {
+            data: format!("error defining static string: {}", err),
+            location,
+        })?;
         Ok(str_id)
     }
-    fn init_expr(
-        &mut self,
-        ctx: &mut DataDescription,
-        buf: &mut [u8],
-        offset: u32,
-        expr: Expr,
-    ) -> CompileResult<()> {
+    fn init_expr(&mut self, ctx: &mut DataDescription, buf: &mut [u8], offset: u32, expr: Expr) -> CompileResult<()> {
         let expr = expr.const_fold()?;
         // static address-of
         match expr.expr {
@@ -203,23 +172,16 @@ impl Compiler {
                     if let ExprType::Id(symbol) = struct_expr.expr {
                         self.static_ref(symbol, member_offset.try_into().unwrap(), offset, ctx);
                     } else {
-                        semantic_err!(
-                            "expression is not a compile time constant".into(),
-                            struct_expr.location
-                        );
+                        semantic_err!("expression is not a compile time constant".into(), struct_expr.location);
                     }
                 }
                 _ => semantic_err!("cannot take the address of an rvalue".into(), expr.location),
             },
             ExprType::Literal(token) => {
-                let bytes =
-                    into_bytes(token, &expr.ctype, &expr.location, &mut self.error_handler)?;
+                let bytes = into_bytes(token, &expr.ctype, &expr.location, &mut self.error_handler)?;
                 buf.copy_from_slice(&bytes);
             }
-            _ => semantic_err!(
-                "expression is not a compile time constant".into(),
-                expr.location
-            ),
+            _ => semantic_err!("expression is not a compile time constant".into(), expr.location),
         }
         Ok(())
     }
@@ -249,9 +211,7 @@ impl Compiler {
     ) -> CompileResult<()> {
         match initializer {
             Initializer::InitializerList(mut initializers) => match ctype {
-                Type::Array(ty, ArrayType::Unbounded) => {
-                    self.init_array(ctx, buf, offset, initializers, ty, location)
-                }
+                Type::Array(ty, ArrayType::Unbounded) => self.init_array(ctx, buf, offset, initializers, ty, location),
                 Type::Array(ty, ArrayType::Fixed(size)) => {
                     if initializers.len() as u64 > *size {
                         Err(CompileError::semantic(Locatable {
@@ -281,8 +241,7 @@ impl Compiler {
                 ),
                 Type::Struct(struct_ref) => {
                     let mut current_offset = 0;
-                    for (member, init) in struct_ref.members().iter().zip(initializers.into_iter())
-                    {
+                    for (member, init) in struct_ref.members().iter().zip(initializers.into_iter()) {
                         let size_host: usize = member
                             .ctype
                             .sizeof()
@@ -343,8 +302,7 @@ impl Compiler {
                 inner_type,
                 location,
             )?;
-            offset +=
-                u32::try_from(inner_size).expect("cannot initialize array larger than 2^32 bytes");
+            offset += u32::try_from(inner_size).expect("cannot initialize array larger than 2^32 bytes");
             element_offset += inner_size;
         }
         // zero-init should already have been taken care of by init_symbol
@@ -359,49 +317,23 @@ fn into_bytes(
     error_handler: &mut ErrorHandler,
 ) -> CompileResult<Box<[u8]>> {
     let ir_type = ctype.as_ir_type();
-    let big_endian = TARGET
-        .endianness()
-        .expect("target should be big or little endian")
-        == target_lexicon::Endianness::Big;
+    let big_endian =
+        TARGET.endianness().expect("target should be big or little endian") == target_lexicon::Endianness::Big;
 
     match value {
         LiteralValue::Int(i) => Ok(match ir_type {
-            types::I8 => bytes!(
-                cast!(i, i64, i8, &ctype, *location, error_handler),
-                big_endian
-            ),
-            types::I16 => bytes!(
-                cast!(i, i64, i16, &ctype, *location, error_handler),
-                big_endian
-            ),
-            types::I32 => bytes!(
-                cast!(i, i64, i32, &ctype, *location, error_handler),
-                big_endian
-            ),
+            types::I8 => bytes!(cast!(i, i64, i8, &ctype, *location, error_handler), big_endian),
+            types::I16 => bytes!(cast!(i, i64, i16, &ctype, *location, error_handler), big_endian),
+            types::I32 => bytes!(cast!(i, i64, i32, &ctype, *location, error_handler), big_endian),
             types::I64 => bytes!(i, big_endian),
-            x => unreachable!(
-                "ir_type {} for integer {} is not of integer type",
-                x, i
-            ),
+            x => unreachable!("ir_type {} for integer {} is not of integer type", x, i),
         }),
         LiteralValue::UnsignedInt(i) => Ok(match ir_type {
-            types::I8 => bytes!(
-                cast!(i, u64, u8, &ctype, *location, error_handler),
-                big_endian
-            ),
-            types::I16 => bytes!(
-                cast!(i, u64, u16, &ctype, *location, error_handler),
-                big_endian
-            ),
-            types::I32 => bytes!(
-                cast!(i, u64, u32, &ctype, *location, error_handler),
-                big_endian
-            ),
+            types::I8 => bytes!(cast!(i, u64, u8, &ctype, *location, error_handler), big_endian),
+            types::I16 => bytes!(cast!(i, u64, u16, &ctype, *location, error_handler), big_endian),
+            types::I32 => bytes!(cast!(i, u64, u32, &ctype, *location, error_handler), big_endian),
             types::I64 => bytes!(i, big_endian),
-            x => unreachable!(
-                "ir_type {} for integer {} is not of integer type",
-                x, i
-            ),
+            x => unreachable!("ir_type {} for integer {} is not of integer type", x, i),
         }),
         LiteralValue::Float(f) => Ok(match ir_type {
             types::F32 => {
@@ -417,10 +349,7 @@ fn into_bytes(
                 bytes!(float_as_int, big_endian)
             }
             types::F64 => bytes!(f.to_bits(), big_endian),
-            x => unreachable!(
-                "ir_type {} for float {} is not of integer type",
-                x, f
-            ),
+            x => unreachable!("ir_type {} for float {} is not of integer type", x, f),
         }),
         LiteralValue::Str(string) => Ok(string.into_boxed_slice()),
         LiteralValue::Char(c) => Ok(Box::new([c])),

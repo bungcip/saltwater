@@ -34,11 +34,11 @@ use std::path::{Path, PathBuf};
 use super::files::FileProcessor;
 use super::replace::{replace, replace_iter, Definition, Definitions};
 use super::{Lexer, LiteralParser, Token};
+use crate::get_str;
 use crate::saltwater_parser::arch::TARGET;
 use crate::saltwater_parser::data::error::CppError;
 use crate::saltwater_parser::data::lex::{Keyword, LiteralToken};
 use crate::saltwater_parser::data::*;
-use crate::get_str;
 use crate::saltwater_parser::Files;
 
 /// An easier interface for constructing a preprocessor.
@@ -92,13 +92,7 @@ impl<'a> PreProcessorBuilder<'a> {
         self
     }
     pub fn build(self) -> PreProcessor<'a> {
-        PreProcessor::new(
-            self.buf,
-            self.filename,
-            self.debug,
-            self.search_path,
-            self.definitions,
-        )
+        PreProcessor::new(self.buf, self.filename, self.debug, self.search_path, self.definitions)
     }
 }
 
@@ -268,11 +262,7 @@ impl<'a> PreProcessor<'a> {
     /// Possibly recursively replace tokens. This also handles turning identifiers into keywords.
     ///
     /// If `token` was defined to an empty token list, this will return `None`.
-    fn handle_token(
-        &mut self,
-        token: PendingToken,
-        location: Location,
-    ) -> Option<CppResult<Token>> {
+    fn handle_token(&mut self, token: PendingToken, location: Location) -> Option<CppResult<Token>> {
         let mut token = {
             // if we've already replaced the token once, don't do it again
             // avoids infinite loops on cyclic defines (#298)
@@ -281,8 +271,7 @@ impl<'a> PreProcessor<'a> {
                 PendingToken::NeedsReplacement(token) => {
                     self.update_builtin_definitions();
                     let mut replacement_list =
-                        replace(&self.definitions, token, &mut self.file_processor, location)
-                            .into_iter();
+                        replace(&self.definitions, token, &mut self.file_processor, location).into_iter();
                     let first = replacement_list.next();
                     for remaining in replacement_list {
                         match remaining {
@@ -378,9 +367,7 @@ impl<'a> PreProcessor<'a> {
     /// `warnings()` again.
     pub fn warnings(&mut self) -> VecDeque<CompileWarning> {
         let mut warnings = std::mem::take(&mut self.error_handler.warnings);
-        warnings.extend(std::mem::take(
-            &mut self.file_processor.error_handler.warnings,
-        ));
+        warnings.extend(std::mem::take(&mut self.file_processor.error_handler.warnings));
         warnings
     }
 
@@ -432,9 +419,7 @@ impl<'a> PreProcessor<'a> {
     fn next_cpp_token(&mut self) -> Option<CppResult<CppToken>> {
         let next_token = self.file_processor.next()?;
         let is_hash = match next_token {
-            Ok(Locatable {
-                data: Token::Hash, ..
-            }) => true,
+            Ok(Locatable { data: Token::Hash, .. }) => true,
             _ => false,
         };
         Some(if is_hash && !self.file_processor.seen_line_token() {
@@ -472,9 +457,7 @@ impl<'a> PreProcessor<'a> {
                 location,
             })) => Ok(Locatable::new(name, location)),
             Some(Err(err)) => Err(err),
-            Some(Ok(other)) => {
-                Err(other.map(|tok| CppError::UnexpectedToken("identifier", tok).into()))
-            }
+            Some(Ok(other)) => Err(other.map(|tok| CppError::UnexpectedToken("identifier", tok).into())),
             None => Err(CompileError {
                 data: CppError::EndOfFile("identifier").into(),
                 location,
@@ -518,26 +501,17 @@ impl<'a> PreProcessor<'a> {
                 )),
             },
             Else => match self.nested_ifs.last() {
-                None => Err(CompileError::new(
-                    CppError::UnexpectedElse.into(),
-                    self.span(start),
-                )),
+                None => Err(CompileError::new(CppError::UnexpectedElse.into(), self.span(start))),
                 // we already took the `#if` condition,
                 // `#else` should just be ignored
                 // `Else` -> `consume_all`
                 Some(IfState::If) | Some(IfState::Elif) => self.consume_directive(start, false),
                 // we saw an `#else` before, seeing it again is an error
-                Some(IfState::Else) => Err(CompileError::new(
-                    CppError::UnexpectedElse.into(),
-                    self.span(start),
-                )),
+                Some(IfState::Else) => Err(CompileError::new(CppError::UnexpectedElse.into(), self.span(start))),
             },
             EndIf => {
                 if self.nested_ifs.pop().is_none() {
-                    Err(CompileError::new(
-                        CppError::UnexpectedEndIf.into(),
-                        self.span(start),
-                    ))
+                    Err(CompileError::new(CppError::UnexpectedEndIf.into(), self.span(start)))
                 } else {
                     Ok(())
                 }
@@ -573,8 +547,7 @@ impl<'a> PreProcessor<'a> {
                     .into_iter()
                     .map(|res| res.map(|l| l.data))
                     .collect::<Result<_, _>>()?;
-                self.error_handler
-                    .error(CppError::User(tokens), self.span(start));
+                self.error_handler.error(CppError::User(tokens), self.span(start));
                 Ok(())
             }
             Line => {
@@ -650,8 +623,7 @@ impl<'a> PreProcessor<'a> {
                         continue;
                     }
                     _ => Err(CompileError::new(
-                        CppError::UnexpectedToken("identifier or right paren", Token::LeftParen)
-                            .into(),
+                        CppError::UnexpectedToken("identifier or right paren", Token::LeftParen).into(),
                         location,
                     )),
                 },
@@ -660,8 +632,7 @@ impl<'a> PreProcessor<'a> {
                     location,
                 }) => match state {
                     Start => Err(CompileError::new(
-                        CppError::UnexpectedToken("identifier or left paren", Token::RightParen)
-                            .into(),
+                        CppError::UnexpectedToken("identifier or left paren", Token::RightParen).into(),
                         location,
                     )),
                     SawParen => Err(CompileError::new(
@@ -703,11 +674,7 @@ impl<'a> PreProcessor<'a> {
                     location,
                 } if name == defined => {
                     let def = Self::defined(&mut lex_tokens, location)?;
-                    let literal = if definitions.contains_key(&def) {
-                        ONE
-                    } else {
-                        ZERO
-                    };
+                    let literal = if definitions.contains_key(&def) { ONE } else { ZERO };
                     location.with(Token::Literal(literal))
                 }
                 _ => token,
@@ -729,10 +696,7 @@ impl<'a> PreProcessor<'a> {
             })
             .collect();
         if cpp_tokens.is_empty() {
-            return Err(CompileError::new(
-                CppError::EmptyExpression.into(),
-                location,
-            ));
+            return Err(CompileError::new(CppError::EmptyExpression.into(), location));
         }
         // TODO: this only returns the first error because anything else requires a refactor
         use crate::saltwater_parser::{analyze::PureAnalyzer, Parser};
@@ -786,13 +750,9 @@ impl<'a> PreProcessor<'a> {
                     ..
                 })) => d,
                 Some(_) => continue,
-                None => {
-                    return Err(Locatable::new(CppError::UnterminatedIf, self.span(start)).into())
-                }
+                None => return Err(Locatable::new(CppError::UnterminatedIf, self.span(start)).into()),
             };
-            if directive == DirectiveKind::If
-                || directive == DirectiveKind::IfDef
-                || directive == DirectiveKind::IfNDef
+            if directive == DirectiveKind::If || directive == DirectiveKind::IfDef || directive == DirectiveKind::IfNDef
             {
                 depth += 1;
             } else if directive == DirectiveKind::EndIf {
@@ -848,24 +808,18 @@ impl<'a> PreProcessor<'a> {
                     continue;
                 }
                 Some(Ok(Locatable {
-                    data: Token::Ellipsis,
-                    ..
+                    data: Token::Ellipsis, ..
                 })) => {
                     let location = self.lexer().span(start);
                     self.error_handler
                         .warn(crate::saltwater_parser::data::error::Warning::IgnoredVariadic, location);
                 }
                 Some(Ok(Locatable {
-                    data: Token::Id(id),
-                    ..
+                    data: Token::Id(id), ..
                 })) => arguments.push(id),
-                Some(Ok(Locatable {
-                    data: other,
-                    location,
-                })) => self.error_handler.error(
-                    CppError::UnexpectedToken("identifier or ')'", other),
-                    location,
-                ),
+                Some(Ok(Locatable { data: other, location })) => self
+                    .error_handler
+                    .error(CppError::UnexpectedToken("identifier or ')'", other), location),
             }
             self.consume_whitespace_oneline(
                 self.file_processor.offset(),
@@ -887,10 +841,9 @@ impl<'a> PreProcessor<'a> {
                     ))
                 }
                 Some(Err(err)) => return Err(err),
-                Some(Ok(other)) => self.error_handler.error(
-                    CppError::UnexpectedToken("',' or ')'", other.data),
-                    other.location,
-                ),
+                Some(Ok(other)) => self
+                    .error_handler
+                    .error(CppError::UnexpectedToken("',' or ')'", other.data), other.location),
             }
         }
     }
@@ -986,14 +939,9 @@ impl<'a> PreProcessor<'a> {
                 }
             };
             self.update_builtin_definitions();
-            match replace(
-                &self.definitions,
-                Token::Id(id),
-                &mut self.file_processor,
-                location,
-            )
-            .into_iter()
-            .next()
+            match replace(&self.definitions, Token::Id(id), &mut self.file_processor, location)
+                .into_iter()
+                .next()
             {
                 // local
                 Some(Ok(Locatable {
@@ -1027,23 +975,15 @@ impl<'a> PreProcessor<'a> {
     }
     // we've done the parsing for an `#include`,
     // now we want to figure what file on disk it corresponds to
-    fn find_include_path(
-        &mut self,
-        filename: &Path,
-        local: bool,
-        start: u32,
-    ) -> Result<PathBuf, Locatable<Error>> {
+    fn find_include_path(&mut self, filename: &Path, local: bool, start: u32) -> Result<PathBuf, Locatable<Error>> {
         if filename.as_os_str().is_empty() {
-            return Err(CompileError::new(
-                CppError::EmptyInclude.into(),
-                self.span(start),
-            ));
+            return Err(CompileError::new(CppError::EmptyInclude.into(), self.span(start)));
         }
 
         let not_found = |this: &Self, filename: &Path| {
-            Err(this.span(start).error(CppError::FileNotFound(
-                filename.to_string_lossy().to_string(),
-            )))
+            Err(this
+                .span(start)
+                .error(CppError::FileNotFound(filename.to_string_lossy().to_string())))
         };
 
         // absolute path, ignore everything except the filename
@@ -1058,9 +998,7 @@ impl<'a> PreProcessor<'a> {
         // local include: #include "dict.h"
         if local {
             let current_path = self.file_processor.path();
-            let relative_path = &current_path
-                .parent()
-                .unwrap_or_else(|| std::path::Path::new(""));
+            let relative_path = &current_path.parent().unwrap_or_else(|| std::path::Path::new(""));
             let resolved = relative_path.join(filename);
             if resolved.exists() {
                 return Ok(resolved);
@@ -1080,12 +1018,7 @@ impl<'a> PreProcessor<'a> {
     }
     // we've done the parsing for an `#include`,
     // now we want to do the dirty work of reading it into memory
-    fn include_path(
-        &mut self,
-        filename: PathBuf,
-        local: bool,
-        start: u32,
-    ) -> Result<(), Locatable<Error>> {
+    fn include_path(&mut self, filename: PathBuf, local: bool, start: u32) -> Result<(), Locatable<Error>> {
         let (path, src) = match self.find_include_path(&filename, local, start) {
             Ok(path) => {
                 let src = std::fs::read_to_string(&path)
@@ -1153,11 +1086,7 @@ impl<'a> PreProcessor<'a> {
 
     /// Consumes whitespace but returns error if it includes a newline
     #[inline]
-    fn consume_whitespace_oneline(
-        &mut self,
-        start: u32,
-        error: CppError,
-    ) -> Result<String, CompileError> {
+    fn consume_whitespace_oneline(&mut self, start: u32, error: CppError) -> Result<String, CompileError> {
         let line = self.line();
         let ret = self.file_processor.consume_whitespace();
         if self.line() != line {
@@ -1522,21 +1451,13 @@ a";
 #define a c
 a
 ";
-        assert_err!(
-            src,
-            CppError::IncompatibleRedefinition(_),
-            "incompatible redfinition"
-        );
+        assert_err!(src, CppError::IncompatibleRedefinition(_), "incompatible redfinition");
         let src = "
 #define a b
 #define a
 a
 ";
-        assert_err!(
-            src,
-            CppError::IncompatibleRedefinition(_),
-            "incompatible redefinition"
-        );
+        assert_err!(src, CppError::IncompatibleRedefinition(_), "incompatible redefinition");
 
         let src = "
 #define a b
@@ -1550,22 +1471,14 @@ a
 #define a(b) b+2
 a(2)
 ";
-        assert_err!(
-            src,
-            CppError::IncompatibleRedefinition(_),
-            "incompatible redefinition"
-        );
+        assert_err!(src, CppError::IncompatibleRedefinition(_), "incompatible redefinition");
 
         let src = "
 #define a(b) b+1
 #define a(c) c+1
 a(2)
 ";
-        assert_err!(
-            src,
-            CppError::IncompatibleRedefinition(_),
-            "incompatible redefinition"
-        );
+        assert_err!(src, CppError::IncompatibleRedefinition(_), "incompatible redefinition");
 
         let src = "
 #define a(b) b+1
@@ -1824,10 +1737,7 @@ h",
         assert_eq!(cpp, "\nf");
     }
     fn assert_same_stringified(cpp: &str, cpp_src: &str) {
-        assert_same_exact(
-            &format!("#define xstr(a) #a\nxstr({})", cpp),
-            &format!("\n{}", cpp_src),
-        );
+        assert_same_exact(&format!("#define xstr(a) #a\nxstr({})", cpp), &format!("\n{}", cpp_src));
     }
     #[test]
     fn stringify() {
@@ -1841,10 +1751,7 @@ h",
 
         assert_same_stringified(r#""\'""#, r#""\"\\'\"""#);
         assert_same_stringified(r#""	""#, r#""\"	\"""#); // Tab in string should be maintained
-        assert_same_stringified(
-            r#""\a+\b+\e+\f+\r+\v+\?""#,
-            r#""\"\\a+\\b+\\e+\\f+\\r+\\v+\\?\"""#,
-        );
+        assert_same_stringified(r#""\a+\b+\e+\f+\r+\v+\?""#, r#""\"\\a+\\b+\\e+\\f+\\r+\\v+\\?\"""#);
         assert_same_stringified(r#""\x3f""#, r#""\"\\x3f\"""#);
         assert_same_stringified(r#""\xff""#, r#""\"\\xff\"""#);
 
@@ -1898,23 +1805,18 @@ h",
     #[test]
     fn builtins_file() {
         let filename = "helloworld.c";
-        let mut cpp = PreProcessorBuilder::new("__FILE__")
-            .filename(filename)
-            .build();
+        let mut cpp = PreProcessorBuilder::new("__FILE__").filename(filename).build();
         let token = cpp.next_non_whitespace().unwrap().unwrap().data;
         if let Token::Literal(LiteralToken::Str(rcstrs)) = token {
-            assert_eq!(
-                rcstrs.first().unwrap().as_str(),
-                format!("\"{}\"", filename)
-            );
+            assert_eq!(rcstrs.first().unwrap().as_str(), format!("\"{}\"", filename));
         } else {
             panic!();
         }
     }
     #[test]
     fn builtins_date_time() {
-        use time::OffsetDateTime;
         use time::macros::format_description;
+        use time::OffsetDateTime;
 
         fn assert_same_datetime(src: &str, cpp_src: &str, datetime: OffsetDateTime) {
             let date_format = format_description!("[month repr:short] [day padding:space] [year]");

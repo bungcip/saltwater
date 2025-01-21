@@ -134,8 +134,7 @@ impl<I: Lexer> Iterator for Parser<I> {
 
 impl<I: Lexer> Parser<I> {
     fn recursion_check(&mut self) -> RecursionGuard {
-        self.recursion_guard
-            .recursion_check(&mut self.error_handler)
+        self.recursion_guard.recursion_check(&mut self.error_handler)
     }
     // don't use this, use next_token instead
     // WARNING: this _cannot_ read or modify `self.current` or `self.next`
@@ -175,10 +174,7 @@ impl<I: Lexer> Parser<I> {
                             None => break,
                         }
                     }
-                    break Some(Locatable::new(
-                        Token::Literal(LiteralToken::Str(concat_strs)),
-                        location,
-                    ));
+                    break Some(Locatable::new(Token::Literal(LiteralToken::Str(concat_strs)), location));
                 }
                 Some(Ok(mut token)) => {
                     self.last_location = token.location;

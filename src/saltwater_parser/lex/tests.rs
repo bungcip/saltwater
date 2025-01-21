@@ -8,12 +8,7 @@ type LexType = CompileResult<Locatable<Token>>;
 
 fn lex(input: &str) -> Option<LexType> {
     let mut lexed = lex_all(input);
-    assert!(
-        lexed.len() <= 1,
-        "too many lexemes for {}: {:?}",
-        input,
-        lexed
-    );
+    assert!(lexed.len() <= 1, "too many lexemes for {}: {:?}", input, lexed);
     lexed.pop()
 }
 fn lex_all(input: &str) -> Vec<LexType> {
@@ -59,26 +54,20 @@ fn match_char(lexed: Option<LexType>, expected: u8) -> bool {
 
 fn match_data_eq(lexed: &Token, other: &Token) -> bool {
     match (lexed, other) {
-        (Token::Literal(lexed), Token::Literal(other)) => {
-            lexed.clone().parse() == other.clone().parse()
-        }
+        (Token::Literal(lexed), Token::Literal(other)) => lexed.clone().parse() == other.clone().parse(),
         (lexed, other) => lexed == other,
     }
 }
 fn match_all(lexed: &[LexType], expected: &[Token]) -> bool {
-    lexed
-        .iter()
-        .zip(expected)
-        .all(|(actual, expected)| match actual {
-            Ok(token) => match_data_eq(&token.data, expected),
-            _ => false,
-        })
+    lexed.iter().zip(expected).all(|(actual, expected)| match actual {
+        Ok(token) => match_data_eq(&token.data, expected),
+        _ => false,
+    })
 }
 fn assert_int(s: &str, expected: i64) {
     assert!(
         match_data(lex(s), |lexed| match lexed.unwrap() {
-            Token::Literal(lit @ LiteralToken::Int(_)) =>
-                lit.clone().parse() == Ok(LiteralValue::Int(expected)),
+            Token::Literal(lit @ LiteralToken::Int(_)) => lit.clone().parse() == Ok(LiteralValue::Int(expected)),
             _ => false,
         }),
         "{} != {}",
@@ -180,10 +169,7 @@ fn test_float_literals() {
     ));
     assert!(match_all(
         &lex_all("-1e10"),
-        &[
-            Token::Minus,
-            LiteralToken::Float(substr(10_000_000_000.0)).into()
-        ]
+        &[Token::Minus, LiteralToken::Float(substr(10_000_000_000.0)).into()]
     ));
     assert!(match_data(lex("9223372036854775807u"), |lexed| {
         match_data_eq(

@@ -5,9 +5,7 @@ pub mod lex;
 pub mod types;
 
 pub use crate::saltwater_parser::intern::InternedStr;
-pub(crate) use error::{
-    CompileError, CompileResult, CompileWarning, Error, ErrorHandler, SemanticError, SyntaxError,
-};
+pub(crate) use error::{CompileError, CompileResult, CompileWarning, Error, ErrorHandler, SemanticError, SyntaxError};
 pub use hir::LiteralValue;
 pub use lex::{LiteralToken, Locatable, Location, Token};
 pub use types::Type;
@@ -30,16 +28,10 @@ pub enum StorageClass {
 
 // helper functions for `Display` impls
 fn joined<I: IntoIterator<Item = T>, T: ToString>(it: I, delim: &str) -> String {
-    it.into_iter()
-        .map(|s| s.to_string())
-        .collect::<Vec<_>>()
-        .join(delim)
+    it.into_iter().map(|s| s.to_string()).collect::<Vec<_>>().join(delim)
 }
 
-fn joined_locatable<'a, I: IntoIterator<Item = &'a Locatable<T>>, T: ToString + 'a>(
-    it: I,
-    delim: &str,
-) -> String {
+fn joined_locatable<'a, I: IntoIterator<Item = &'a Locatable<T>>, T: ToString + 'a>(it: I, delim: &str) -> String {
     joined(it.into_iter().map(|s| s.data.to_string()), delim)
 }
 
@@ -104,15 +96,11 @@ mod tests {
             "struct s",
         ];
         for ty in types.iter() {
-            let parsed_ty = analyze(ty, Parser::type_name, |a, b| {
-                a.parse_typename_test(b.data, b.location)
-            })
-            .unwrap();
+            let parsed_ty = analyze(ty, Parser::type_name, |a, b| a.parse_typename_test(b.data, b.location)).unwrap();
             assert_eq!(&parsed_ty.to_string(), *ty);
         }
     }
 }
-
 
 mod codegen_impls {
     use crate::saltwater_parser::arch::*;
@@ -157,16 +145,13 @@ mod codegen_impls {
                 // Integers
                 Bool => types::I8,
                 Char(_) | Short(_) | Int(_) | Long(_) | Pointer(_, _) | Enum(_, _) => {
-                    let int_size = SIZE_T::from(CHAR_BIT)
-                        * self
-                            .sizeof()
-                            .expect("integers should always have a valid size");
-                    IrType::int(int_size.try_into().unwrap_or_else(|_| {
-                        panic!(
-                            "integers should never have a size larger than {}",
-                            i16::MAX
-                        )
-                    }))
+                    let int_size =
+                        SIZE_T::from(CHAR_BIT) * self.sizeof().expect("integers should always have a valid size");
+                    IrType::int(
+                        int_size
+                            .try_into()
+                            .unwrap_or_else(|_| panic!("integers should never have a size larger than {}", i16::MAX)),
+                    )
                     .unwrap_or_else(|| panic!("unsupported size for IR: {}", int_size))
                 }
 
@@ -177,8 +162,9 @@ mod codegen_impls {
 
                 // Aggregates
                 // arrays and functions decay to pointers
-                Function(_) | Array(_, _) => IrType::int(PTR_SIZE * CHAR_BIT)
-                    .unwrap_or_else(|| panic!("unsupported size of IR: {}", PTR_SIZE)),
+                Function(_) | Array(_, _) => {
+                    IrType::int(PTR_SIZE * CHAR_BIT).unwrap_or_else(|| panic!("unsupported size of IR: {}", PTR_SIZE))
+                }
                 // void cannot be loaded or stored
                 _ => types::INVALID,
             }
@@ -219,10 +205,7 @@ mod codegen_impls {
                 //     .register_info()
                 //     .parse_regunit("rax")
                 //     .expect("x86 should have an rax register");
-                params.push(AbiParam::special(
-                    types::I8,
-                    ArgumentPurpose::Normal,
-                ));
+                params.push(AbiParam::special(types::I8, ArgumentPurpose::Normal));
             }
             let return_type = if !self.should_return() {
                 vec![]

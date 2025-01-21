@@ -137,10 +137,7 @@ impl<I: Lexer> Parser<I> {
     // see `BinaryPrecedence` for all possible binary expressions
     fn binary_expr(&mut self, mut left: Expr, max_precedence: usize) -> SyntaxResult<Expr> {
         let _guard = self.recursion_check();
-        while let Some(binop) = self
-            .peek_token()
-            .and_then(|tok| BinaryPrecedence::try_from(tok).ok())
-        {
+        while let Some(binop) = self.peek_token().and_then(|tok| BinaryPrecedence::try_from(tok).ok()) {
             let prec = binop.prec();
             if prec < max_precedence {
                 break;
@@ -207,8 +204,7 @@ impl<I: Lexer> Parser<I> {
             {
                 prefixes.push((constructor, location));
             // these keywords can be followed by either a type name or an expression
-            } else if let Some(keyword) = self.match_keywords(&[Keyword::Sizeof, Keyword::Alignof])
-            {
+            } else if let Some(keyword) = self.match_keywords(&[Keyword::Sizeof, Keyword::Alignof]) {
                 // `sizeof(int)` is a primary expr
                 if let Some(mut ctype) = self.parenthesized_type()? {
                     ctype.location = keyword.location.merge(ctype.location);
@@ -226,10 +222,7 @@ impl<I: Lexer> Parser<I> {
                     } else {
                         ExprType::AlignofExpr
                     };
-                    prefixes.push((
-                        Box::new(move |a| constructor(Box::new(a))),
-                        keyword.location,
-                    ));
+                    prefixes.push((Box::new(move |a| constructor(Box::new(a))), keyword.location));
                 }
             } else {
                 break self.primary_expr()?;
@@ -339,10 +332,7 @@ impl<I: Lexer> Parser<I> {
                 let index = self.expr()?;
                 let end = self.expect(Token::RightBracket)?.location;
                 let location = start.merge(index.location).merge(end);
-                (
-                    Box::new(move |expr| ExprType::Index(expr, Box::new(index))),
-                    location,
-                )
+                (Box::new(move |expr| ExprType::Index(expr, Box::new(index))), location)
             }
             Some(Token::LeftParen) => {
                 let mut start = next_location(self);
@@ -383,10 +373,7 @@ pub(crate) mod test {
     use crate::saltwater_parser::parse::*;
 
     fn assert_same(left: &str, right: &str) {
-        assert_eq!(
-            expr(left).unwrap().to_string(),
-            expr(right).unwrap().to_string()
-        );
+        assert_eq!(expr(left).unwrap().to_string(), expr(right).unwrap().to_string());
     }
     fn assert_expr_display(left: &str, right: &str) {
         assert_eq!(expr(left).unwrap().to_string(), right);
@@ -453,10 +440,7 @@ pub(crate) mod test {
     }
     #[test]
     fn parse_casts() {
-        assert_expr_display(
-            "(int)(char)(double)(_Bool)0",
-            "(int)((char)((double)((_Bool)(0))))",
-        );
+        assert_expr_display("(int)(char)(double)(_Bool)0", "(int)((char)((double)((_Bool)(0))))");
         assert_expr_display("(int)&(char)0", "(int)(&((char)(0)))");
         assert_expr_display("sizeof 1 + 2", "(sizeof(1)) + (2)");
         // sizeof(int) takes precedence over (int)1

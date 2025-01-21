@@ -26,9 +26,7 @@ impl FunctionAnalyzer<'_> {
             Expr(expr) => S::Expr(self.expr(expr)),
             // 6.8.4.1 The if statement
             If(condition, then, otherwise) => {
-                let condition = self
-                    .expr(condition)
-                    .truthy(&mut self.analyzer.error_handler);
+                let condition = self.expr(condition).truthy(&mut self.analyzer.error_handler);
                 let then = self.parse_stmt(*then);
                 let otherwise = otherwise.map(|s| Box::new(self.parse_stmt(*s)));
                 S::If(condition, Box::new(then), otherwise)
@@ -37,10 +35,7 @@ impl FunctionAnalyzer<'_> {
             Switch(value, body) => {
                 let value = self.expr(value).rval();
                 if !value.ctype.is_integral() {
-                    self.err(
-                        SemanticError::NonIntegralSwitch(value.ctype.clone()),
-                        stmt.location,
-                    )
+                    self.err(SemanticError::NonIntegralSwitch(value.ctype.clone()), stmt.location)
                 }
                 let body = self.parse_stmt(*body);
                 S::Switch(value, Box::new(body))
@@ -48,16 +43,12 @@ impl FunctionAnalyzer<'_> {
             // 6.8.5.2 The do statement
             Do(body, condition) => {
                 let body = self.parse_stmt(*body);
-                let condition = self
-                    .expr(condition)
-                    .truthy(&mut self.analyzer.error_handler);
+                let condition = self.expr(condition).truthy(&mut self.analyzer.error_handler);
                 S::Do(Box::new(body), condition)
             }
             // 6.8.5.1 The while statement
             While(condition, body) => {
-                let condition = self
-                    .expr(condition)
-                    .truthy(&mut self.analyzer.error_handler);
+                let condition = self.expr(condition).truthy(&mut self.analyzer.error_handler);
                 let body = self.parse_stmt(*body);
                 S::While(condition, Box::new(body))
             }
@@ -72,8 +63,7 @@ impl FunctionAnalyzer<'_> {
                 // Or encode that in the type somehow?
                 self.enter_scope();
                 let initializer = self.parse_stmt(*initializer);
-                let condition = condition
-                    .map(|e| Box::new(self.expr(*e).truthy(&mut self.analyzer.error_handler)));
+                let condition = condition.map(|e| Box::new(self.expr(*e).truthy(&mut self.analyzer.error_handler)));
                 let post_loop = post_loop.map(|e| Box::new(self.expr(*e)));
                 let body = self.parse_stmt(*body);
                 self.leave_scope(stmt.location);
@@ -109,12 +99,7 @@ impl FunctionAnalyzer<'_> {
         Locatable::new(data, stmt.location)
     }
     // 6.8.1 Labeled statements
-    fn case_statement(
-        &mut self,
-        expr: ast::Expr,
-        inner: ast::Stmt,
-        location: Location,
-    ) -> StmtType {
+    fn case_statement(&mut self, expr: ast::Expr, inner: ast::Stmt, location: Location) -> StmtType {
         use super::expr::literal;
 
         let expr = match self.expr(expr).const_fold() {
@@ -153,27 +138,19 @@ impl FunctionAnalyzer<'_> {
             (None, false) => StmtType::Return(None),
             // int f() { return; }
             (None, true) => {
-                self.err(
-                    SemanticError::MissingReturnValue(self.metadata.id),
-                    location,
-                );
+                self.err(SemanticError::MissingReturnValue(self.metadata.id), location);
                 StmtType::Return(None)
             }
             // void f() { return 1; }
             (Some(expr), false) => {
-                self.err(
-                    SemanticError::ReturnFromVoid(self.metadata.id),
-                    expr.location,
-                );
+                self.err(SemanticError::ReturnFromVoid(self.metadata.id), expr.location);
                 StmtType::Return(None)
             }
             // int f() { return 1; }
             (Some(expr), true) => {
                 let expr = expr.rval();
                 if expr.ctype != *ret_type {
-                    StmtType::Return(Some(
-                        expr.implicit_cast(ret_type, &mut self.analyzer.error_handler),
-                    ))
+                    StmtType::Return(Some(expr.implicit_cast(ret_type, &mut self.analyzer.error_handler)))
                 } else {
                     StmtType::Return(Some(expr))
                 }
@@ -188,8 +165,8 @@ mod tests {
     use crate::saltwater_parser::analyze::test::{analyze, analyze_expr};
     use crate::saltwater_parser::analyze::FunctionData;
     use crate::saltwater_parser::data::*;
-    use crate::saltwater_parser::Parser;
     use crate::saltwater_parser::Location;
+    use crate::saltwater_parser::Parser;
 
     fn parse_stmt(stmt: &str) -> CompileResult<Stmt> {
         analyze(stmt, Parser::statement, |a, stmt| {

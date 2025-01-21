@@ -27,7 +27,9 @@ use cranelift::codegen::{
     ir::{
         entities::StackSlot,
         function::Function,
-        stackslot::{StackSlotData, StackSlotKind}, InstBuilder},
+        stackslot::{StackSlotData, StackSlotKind},
+        InstBuilder,
+    },
     isa::TargetIsa,
     settings::{self, Configurable, Flags},
 };
@@ -44,12 +46,9 @@ use crate::saltwater_parser::data::{
 
 pub(crate) fn get_isa() -> Arc<dyn TargetIsa + 'static> {
     let mut flags_builder = cranelift::codegen::settings::builder();
-    
 
     // allow creating shared libraries
-    flags_builder
-        .enable("is_pic")
-        .expect("is_pic should be a valid option");
+    flags_builder.enable("is_pic").expect("is_pic should be a valid option");
 
     // use debug assertions
     flags_builder
@@ -62,18 +61,14 @@ pub(crate) fn get_isa() -> Arc<dyn TargetIsa + 'static> {
     let flags = Flags::new(flags_builder);
 
     let result = cranelift::codegen::isa::lookup(TARGET)
-        .unwrap_or_else(|_| panic!("platform not supported: {TARGET}"))    
+        .unwrap_or_else(|_| panic!("platform not supported: {TARGET}"))
         .finish(flags);
 
     result.unwrap()
 }
 
 pub fn initialize_aot_module(name: String) -> ObjectModule {
-    let builder = ObjectBuilder::new(
-        get_isa(),
-        name,
-        cranelift_module::default_libcall_names(),
-    );
+    let builder = ObjectBuilder::new(get_isa(), name, cranelift_module::default_libcall_names());
     ObjectModule::new(builder.expect("unsupported binary format or target architecture"))
 }
 
@@ -186,10 +181,12 @@ impl Compiler {
         let kind = StackSlotKind::ExplicitSlot;
         let size = match u32::try_from(u64_size) {
             Ok(size) => size,
-            Err(_) => return Err(CompileError::semantic(Locatable {
-                data: "cannot store items on the stack that are more than 4 GB, it will overflow the stack".into(),
-                location,
-            }))
+            Err(_) => {
+                return Err(CompileError::semantic(Locatable {
+                    data: "cannot store items on the stack that are more than 4 GB, it will overflow the stack".into(),
+                    location,
+                }))
+            }
         };
         let data = StackSlotData::new(kind, size, 0);
         let stack_slot = builder.create_sized_stack_slot(data);
@@ -291,7 +288,7 @@ impl Compiler {
         }
 
         self.compile_all(stmts, &mut builder)?;
-        
+
         if self.current_block_state != BlockState::Filled {
             let id = symbol.get().id;
             if id == InternedStr::get_or_intern("main") {
@@ -322,22 +319,13 @@ impl Compiler {
         }
 
         if let Err(err) = codegen::verify_function(&func, &flags) {
-            panic!(
-                "verification error: {}\nnote: while compiling {}",
-                err, func
-            );
+            panic!("verification error: {}\nnote: while compiling {}", err, func);
         }
 
         let mut ctx = codegen::Context::for_function(func);
         // let mut trap_sink = codegen::binemit::NullTrapSink {};
-        if let Err(err) = self
-            .module
-            .define_function(func_id, &mut ctx)
-        {
-            panic!(
-                "definition error: {}\nnote: while compiling {}",
-                err, ctx.func
-            );
+        if let Err(err) = self.module.define_function(func_id, &mut ctx) {
+            panic!("definition error: {}\nnote: while compiling {}", err, ctx.func);
         }
 
         Ok(())
@@ -410,12 +398,8 @@ pub fn assemble(product: Product, output: &Path) -> Result<(), crate::saltwater_
     use std::fs::File;
     use std::io::{self, Write};
 
-    let bytes = product
-        .emit()
-        .map_err(crate::saltwater_parser::Error::Platform)?;
-    File::create(output)?
-        .write_all(&bytes)
-        .map_err(io::Error::into)
+    let bytes = product.emit().map_err(crate::saltwater_parser::Error::Platform)?;
+    File::create(output)?.write_all(&bytes).map_err(io::Error::into)
 }
 
 pub fn link(obj_file: &Path, output: &Path) -> Result<(), std::io::Error> {

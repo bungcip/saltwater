@@ -42,9 +42,7 @@ impl Compiler {
             expr.ctype.as_ir_type()
         };
         match expr.expr {
-            ExprType::Literal(token) => {
-                self.compile_literal(ir_type, expr.ctype, token, location, builder)
-            }
+            ExprType::Literal(token) => self.compile_literal(ir_type, expr.ctype, token, location, builder),
             ExprType::Id(var) => self.load_addr(var, builder),
 
             // unary operators
@@ -61,14 +59,10 @@ impl Compiler {
             // NOTE: it may also be a widening conversion (1 + 1.2)
             ExprType::Cast(orig) => self.cast(*orig, expr.ctype, builder),
             ExprType::Negate(expr) => self.negate(*expr, builder),
-            ExprType::BitwiseNot(expr) => self.unary_op(
-                *expr,
-                builder,
-                |ir_val, ir_type, _, builder| match ir_type {
-                    ty if ty.is_int() => builder.ins().bnot(ir_val),
-                    _ => unreachable!("parser should catch illegal types"),
-                },
-            ),
+            ExprType::BitwiseNot(expr) => self.unary_op(*expr, builder, |ir_val, ir_type, _, builder| match ir_type {
+                ty if ty.is_int() => builder.ins().bnot(ir_val),
+                _ => unreachable!("parser should catch illegal types"),
+            }),
             // binary operators
             ExprType::Binary(BinaryOp::LogicalOr, left, right) => {
                 self.logical_expr(*left, *right, LogicalOp::Or, builder)
@@ -76,12 +70,8 @@ impl Compiler {
             ExprType::Binary(BinaryOp::LogicalAnd, left, right) => {
                 self.logical_expr(*left, *right, LogicalOp::And, builder)
             }
-            ExprType::Binary(BinaryOp::Assign, left, right) => {
-                self.assignment(*left, *right, builder)
-            }
-            ExprType::Binary(op, left, right) => {
-                self.binary_assign_op(*left, *right, expr.ctype, op, builder)
-            }
+            ExprType::Binary(BinaryOp::Assign, left, right) => self.assignment(*left, *right, builder),
+            ExprType::Binary(op, left, right) => self.binary_assign_op(*left, *right, expr.ctype, op, builder),
             ExprType::FuncCall(func, args) => match func.expr {
                 ExprType::Id(var) => self.call(FuncCall::Named(var), func.ctype, args, builder),
                 _ => {
@@ -128,13 +118,11 @@ impl Compiler {
                     (Type::Float, true) => (builder.ins().f32const(addend as f32), InstBuilder::fadd),
                     (Type::Float, false) => (builder.ins().f32const(addend as f32), InstBuilder::fsub),
                     (_, true) => (builder.ins().iconst(previous_value.ir_type, addend), InstBuilder::iadd),
-                    (_, false) => (builder.ins().iconst(previous_value.ir_type, addend),InstBuilder::isub),
+                    (_, false) => (builder.ins().iconst(previous_value.ir_type, addend), InstBuilder::isub),
                 };
 
                 let new_value = add_func(builder.ins(), previous_value.ir_val, addend_ir);
-                builder
-                    .ins()
-                    .store(MemFlags::new(), new_value, lval.ir_val, 0);
+                builder.ins().store(MemFlags::new(), new_value, lval.ir_val, 0);
 
                 Ok(previous_value)
             }
@@ -143,29 +131,23 @@ impl Compiler {
                 val.ctype = expr.ctype;
                 Ok(val)
             }
-            ExprType::Ternary(condition, left, right) => {
-                self.ternary(*condition, *left, *right, builder)
-            }
+            ExprType::Ternary(condition, left, right) => self.ternary(*condition, *left, *right, builder),
             ExprType::Sizeof(_) => unimplemented!("sizeof variable length arrays"),
             ExprType::StaticRef(_) => {
                 unreachable!("static refs can only appear in top level declarations")
             }
         }
     }
-    fn ternary(
-        &mut self,
-        condition: Expr,
-        left: Expr,
-        right: Expr,
-        builder: &mut FunctionBuilder,
-    ) -> IrResult {
+    fn ternary(&mut self, condition: Expr, left: Expr, right: Expr, builder: &mut FunctionBuilder) -> IrResult {
         let target_block = builder.create_block();
         let target_type = left.ctype.as_ir_type();
         builder.append_block_param(target_block, target_type);
 
         let condition = self.compile_expr(condition, builder)?;
         let (block_if_true, block_if_false) = (builder.create_block(), builder.create_block());
-        builder.ins().brif(condition.ir_val, block_if_true, &[], block_if_false, &[]);
+        builder
+            .ins()
+            .brif(condition.ir_val, block_if_true, &[], block_if_false, &[]);
 
         builder.switch_to_block(block_if_true);
         let left_val = self.compile_expr(left, builder)?;
@@ -183,24 +165,21 @@ impl Compiler {
             ctype: left_val.ctype,
         })
     }
-    fn logical_expr(
-        &mut self,
-        left: Expr,
-        right: Expr,
-        op: LogicalOp,
-        builder: &mut FunctionBuilder,
-    ) -> IrResult {
+    fn logical_expr(&mut self, left: Expr, right: Expr, op: LogicalOp, builder: &mut FunctionBuilder) -> IrResult {
         let right_block = builder.create_block();
         let merge_block = builder.create_block();
-
 
         builder.append_block_param(merge_block, types::I8);
         let left = self.compile_expr(left, builder)?;
 
         if op == LogicalOp::Or {
-            builder.ins().brif(left.ir_val, merge_block, &[left.ir_val], right_block, &[]);
-        }else{
-            builder.ins().brif(left.ir_val, right_block, &[], merge_block, &[left.ir_val]);
+            builder
+                .ins()
+                .brif(left.ir_val, merge_block, &[left.ir_val], right_block, &[]);
+        } else {
+            builder
+                .ins()
+                .brif(left.ir_val, right_block, &[], merge_block, &[left.ir_val]);
         }
 
         builder.switch_to_block(right_block);
@@ -240,11 +219,7 @@ impl Compiler {
             }
             _ => unimplemented!("aggregate literals"),
         };
-        Ok(Value {
-            ir_val,
-            ir_type,
-            ctype,
-        })
+        Ok(Value { ir_val, ir_type, ctype })
     }
     fn unary_op<F>(&mut self, expr: Expr, builder: &mut FunctionBuilder, func: F) -> IrResult
     where
@@ -268,10 +243,7 @@ impl Compiler {
         op: BinaryOp,
         builder: &mut FunctionBuilder,
     ) -> IrResult {
-        let (left, right) = (
-            self.compile_expr(left, builder)?,
-            self.compile_expr(right, builder)?,
-        );
+        let (left, right) = (self.compile_expr(left, builder)?, self.compile_expr(right, builder)?);
         Self::binary_assign_ir(left, right, ctype, op, builder)
     }
     fn binary_assign_ir(
@@ -298,8 +270,8 @@ impl Compiler {
             (Div, ty, _) if ty.is_float() => b::fdiv,
             (Mod, ty, true) if ty.is_int() => b::srem,
             (Mod, ty, false) if ty.is_int() => b::urem,
-            (BitwiseAnd, ty, _) if ty.is_int()  => b::band,
-            (BitwiseOr, ty, _) if ty.is_int()  => b::bor,
+            (BitwiseAnd, ty, _) if ty.is_int() => b::band,
+            (BitwiseOr, ty, _) if ty.is_int() => b::bor,
             (Shl, ty, _) if ty.is_int() => b::ishl,
             // arithmetic shift: keeps the sign of `left`
             (Shr, ty, true) if ty.is_int() => b::sshr,
@@ -310,17 +282,10 @@ impl Compiler {
             (Assign, _, _) | (LogicalAnd, _, _) | (LogicalOr, _, _) => {
                 unreachable!("should be handled earlier")
             }
-            _ => unreachable!(
-                "bug in parser: passed invalid type {} for binary op {}",
-                ctype, op
-            ),
+            _ => unreachable!("bug in parser: passed invalid type {} for binary op {}", ctype, op),
         };
         let ir_val = func(builder.ins(), left.ir_val, right.ir_val);
-        Ok(Value {
-            ir_val,
-            ir_type,
-            ctype,
-        })
+        Ok(Value { ir_val, ir_type, ctype })
     }
     fn cast(&mut self, expr: Expr, ctype: Type, builder: &mut FunctionBuilder) -> IrResult {
         // calculate this here before it's moved to `compile_expr`
@@ -369,16 +334,12 @@ impl Compiler {
             //     builder.ins().icmp_imm(condcodes::IntCC::NotEqual, val, 0)
             // }
             (big_int, small_int)
-                if big_int.is_int()
-                    && small_int.is_int()
-                    && big_int.lane_bits() > small_int.lane_bits() =>
+                if big_int.is_int() && small_int.is_int() && big_int.lane_bits() > small_int.lane_bits() =>
             {
                 builder.ins().ireduce(small_int, val)
             }
             (small_int, big_int)
-                if big_int.is_int()
-                    && small_int.is_int()
-                    && big_int.lane_bits() > small_int.lane_bits() =>
+                if big_int.is_int() && small_int.is_int() && big_int.lane_bits() > small_int.lane_bits() =>
             {
                 if from_signed {
                     builder.ins().sextend(big_int, val)
@@ -447,12 +408,7 @@ impl Compiler {
             ctype,
         })
     }
-    fn compare(
-        left: Value,
-        right: Value,
-        token: ComparisonToken,
-        builder: &mut FunctionBuilder,
-    ) -> IrResult {
+    fn compare(left: Value, right: Value, token: ComparisonToken, builder: &mut FunctionBuilder) -> IrResult {
         assert_eq!(left.ir_type, right.ir_type);
 
         let ir_val = if left.ir_type.is_int() {
@@ -477,10 +433,7 @@ impl Compiler {
     fn assignment(&mut self, lval: Expr, rval: Expr, builder: &mut FunctionBuilder) -> IrResult {
         let ctype = lval.ctype.clone();
         let location = lval.location;
-        let (target, value) = (
-            self.compile_expr(lval, builder)?,
-            self.compile_expr(rval, builder)?,
-        );
+        let (target, value) = (self.compile_expr(lval, builder)?, self.compile_expr(rval, builder)?);
         if let Type::Union(_) | Type::Struct(_) = ctype {
             let size = ctype.sizeof().map_err(|e| location.with(e.to_string()))?;
             let align = ctype
@@ -497,24 +450,16 @@ impl Compiler {
                 align,
                 // could be overlapping: `s = s;`
                 false,
-                MemFlags::new()
+                MemFlags::new(),
             );
             return Ok(value);
         }
         // scalar assignment
         let target_val = target.ir_val;
-        builder
-            .ins()
-            .store(MemFlags::new(), value.ir_val, target_val, 0);
+        builder.ins().store(MemFlags::new(), value.ir_val, target_val, 0);
         Ok(value)
     }
-    fn call(
-        &mut self,
-        func: FuncCall,
-        ctype: Type,
-        args: Vec<Expr>,
-        builder: &mut FunctionBuilder,
-    ) -> IrResult {
+    fn call(&mut self, func: FuncCall, ctype: Type, args: Vec<Expr>, builder: &mut FunctionBuilder) -> IrResult {
         use cranelift::codegen::ir::{AbiParam, ArgumentPurpose};
         use hir::Qualifiers;
 

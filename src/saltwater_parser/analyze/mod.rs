@@ -149,16 +149,12 @@ impl PureAnalyzer {
         self.error_handler.warn(w, l);
     }
     fn recursion_check(&mut self) -> RecursionGuard {
-        self.recursion_guard
-            .recursion_check(&mut self.error_handler)
+        self.recursion_guard.recursion_check(&mut self.error_handler)
     }
     /// 6.9 External Definitions
     ///
     /// Either a function or a list of declarations.
-    fn parse_external_declaration(
-        &mut self,
-        next: Locatable<ast::ExternalDeclaration>,
-    ) -> Vec<Locatable<Declaration>> {
+    fn parse_external_declaration(&mut self, next: Locatable<ast::ExternalDeclaration>) -> Vec<Locatable<Declaration>> {
         use ast::ExternalDeclaration;
 
         match next.data {
@@ -172,17 +168,11 @@ impl PureAnalyzer {
                 };
                 vec![Locatable::new(decl, next.location)]
             }
-            ExternalDeclaration::Declaration(declaration) => {
-                self.parse_declaration(declaration, next.location)
-            }
+            ExternalDeclaration::Declaration(declaration) => self.parse_declaration(declaration, next.location),
         }
     }
     /// A list of declarations: `int i, j, k;`
-    fn parse_declaration(
-        &mut self,
-        declaration: ast::Declaration,
-        location: Location,
-    ) -> Vec<Locatable<Declaration>> {
+    fn parse_declaration(&mut self, declaration: ast::Declaration, location: Location) -> Vec<Locatable<Declaration>> {
         let original = self.parse_specifiers(declaration.specifiers, location);
 
         if original.storage_class == Some(StorageClass::Auto) && self.scope.is_global() {
@@ -193,8 +183,7 @@ impl PureAnalyzer {
         let sc = original.storage_class.unwrap_or(StorageClass::Auto);
         let mut decls = Vec::new();
         for d in declaration.declarators {
-            let mut ctype =
-                self.parse_declarator(original.ctype.clone(), d.data.declarator.decl, d.location);
+            let mut ctype = self.parse_declarator(original.ctype.clone(), d.data.declarator.decl, d.location);
 
             if !ctype.is_function() && original.qualifiers.func != FunctionQualifiers::default() {
                 self.err(
@@ -281,10 +270,7 @@ impl PureAnalyzer {
         specs.ctype = self.parse_declarator(specs.ctype, declarator, location);
 
         if !specs.ctype.is_function() && specs.qualifiers.func != FunctionQualifiers::default() {
-            self.err(
-                SemanticError::FuncQualifiersNotAllowed(specs.qualifiers.func),
-                location,
-            );
+            self.err(SemanticError::FuncQualifiersNotAllowed(specs.qualifiers.func), location);
         }
 
         specs
@@ -298,11 +284,7 @@ impl PureAnalyzer {
     /// Normally, we warn when a declaration is empty,
     /// but if we declared a struct, union, or enum, then no warning is emitted.
     /// This is kept track of by `declared_compound_type`.
-    fn parse_specifiers(
-        &mut self,
-        specifiers: Vec<ast::DeclarationSpecifier>,
-        location: Location,
-    ) -> ParsedType {
+    fn parse_specifiers(&mut self, specifiers: Vec<ast::DeclarationSpecifier>, location: Location) -> ParsedType {
         use ast::{DeclarationSpecifier::*, UnitSpecifier::*};
 
         // need to parse specifiers now
@@ -368,10 +350,7 @@ impl PureAnalyzer {
         ] {
             if counter.get(spec).is_some() {
                 if let Some(existing) = storage_class {
-                    self.err(
-                        SemanticError::ConflictingStorageClass(existing, *sc),
-                        location,
-                    );
+                    self.err(SemanticError::ConflictingStorageClass(existing, *sc), location);
                 }
                 storage_class = Some(*sc);
             }
@@ -398,10 +377,7 @@ impl PureAnalyzer {
                     // about it here.
                     (_, None) | (Short, Some(Type::Int(_))) => {}
                     (_, Some(existing)) => {
-                        self.err(
-                            SemanticError::ConflictingType(existing, new_ctype.clone()),
-                            location,
-                        );
+                        self.err(SemanticError::ConflictingType(existing, new_ctype.clone()), location);
                     }
                 }
                 ctype = Some(new_ctype);
@@ -413,10 +389,7 @@ impl PureAnalyzer {
                 // `long int` is valid
                 Some(Type::Short(_)) | Some(Type::Long(_)) => {}
                 Some(existing) => {
-                    self.err(
-                        SemanticError::ConflictingType(existing, Type::Int(signed)),
-                        location,
-                    );
+                    self.err(SemanticError::ConflictingType(existing, Type::Int(signed)), location);
                     ctype = Some(Type::Int(signed));
                 }
             }
@@ -436,9 +409,7 @@ impl PureAnalyzer {
                 }
                 Struct(s) => self.struct_specifier(s, true, &mut declared_compound_type, location),
                 Union(s) => self.struct_specifier(s, false, &mut declared_compound_type, location),
-                Enum { name, members } => {
-                    self.enum_specifier(name, members, &mut declared_compound_type, location)
-                }
+                Enum { name, members } => self.enum_specifier(name, members, &mut declared_compound_type, location),
             };
             // TODO: this should report the name of the typedef, not the type itself
             if let Some(existing) = &ctype {
@@ -455,8 +426,7 @@ impl PureAnalyzer {
         if counter.get(&Signed).is_some() || counter.get(&Unsigned).is_some() {
             match &ctype {
                 // unsigned int
-                Some(Type::Char(_)) | Some(Type::Short(_)) | Some(Type::Int(_))
-                | Some(Type::Long(_)) => {}
+                Some(Type::Char(_)) | Some(Type::Short(_)) | Some(Type::Int(_)) | Some(Type::Long(_)) => {}
                 // unsigned float
                 Some(other) => {
                     let err = SemanticError::CannotBeSigned(other.clone());
@@ -502,11 +472,7 @@ impl PureAnalyzer {
                     self.error_handler.error(SemanticError::from(err), location);
                     return Type::Error;
                 };
-                let keyword = if is_struct {
-                    Keyword::Struct
-                } else {
-                    Keyword::Union
-                };
+                let keyword = if is_struct { Keyword::Struct } else { Keyword::Union };
 
                 return match (is_struct, self.tag_scope.get(&name)) {
                     // `struct s *p;`
@@ -520,7 +486,10 @@ impl PureAnalyzer {
                         if self.tag_scope.get_immediate(&name).is_some() {
                             let kind = if is_struct { "struct" } else { "union " };
                             // TODO: say what the previous declaration was
-                            let err = SemanticError::from(format!("use of '{}' with type tag '{}' that does not match previous struct declaration", name, kind));
+                            let err = SemanticError::from(format!(
+                                "use of '{}' with type tag '{}' that does not match previous struct declaration",
+                                name, kind
+                            ));
                             self.error_handler.push_back(Locatable::new(err, location));
                             Type::Error
                         } else {
@@ -541,8 +510,7 @@ impl PureAnalyzer {
         }
         let constructor = if is_struct { Type::Struct } else { Type::Union };
         if let Some(id) = struct_spec.name {
-            let struct_ref = if let Some(TagEntry::Struct(struct_ref))
-            | Some(TagEntry::Union(struct_ref)) =
+            let struct_ref = if let Some(TagEntry::Struct(struct_ref)) | Some(TagEntry::Union(struct_ref)) =
                 self.tag_scope.get_immediate(&id)
             {
                 let struct_ref = *struct_ref;
@@ -562,11 +530,7 @@ impl PureAnalyzer {
                 StructRef::new()
             };
             struct_ref.update(members);
-            let entry = if is_struct {
-                TagEntry::Struct
-            } else {
-                TagEntry::Union
-            }(struct_ref);
+            let entry = if is_struct { TagEntry::Struct } else { TagEntry::Union }(struct_ref);
             self.tag_scope.insert(id, entry);
             *declared_struct = true;
             constructor(StructType::Named(id, struct_ref))
@@ -583,11 +547,7 @@ impl PureAnalyzer {
         | declarator ':' constant_expr
         ;
     */
-    fn struct_declarator_list(
-        &mut self,
-        members: ast::StructDeclarationList,
-        location: Location,
-    ) -> Vec<Variable> {
+    fn struct_declarator_list(&mut self, members: ast::StructDeclarationList, location: Location) -> Vec<Variable> {
         let parsed_type = self.parse_specifiers(members.specifiers, location);
         if parsed_type.qualifiers.has_func_qualifiers() {
             self.err(
@@ -605,8 +565,7 @@ impl PureAnalyzer {
                 None => continue,
                 Some(d) => d,
             };
-            let ctype = match self.parse_declarator(parsed_type.ctype.clone(), decl.decl, location)
-            {
+            let ctype = match self.parse_declarator(parsed_type.ctype.clone(), decl.decl, location) {
                 Type::Void => {
                     // TODO: catch this error for types besides void?
                     self.err(SemanticError::VoidType, location);
@@ -644,10 +603,8 @@ impl PureAnalyzer {
                     ));
                     self.err(err, location);
                 }
-                self.error_handler.warn(
-                    "bitfields are not implemented and will be ignored",
-                    location,
-                );
+                self.error_handler
+                    .warn("bitfields are not implemented and will be ignored", location);
             }
             match symbol.ctype {
                 Type::Struct(StructType::Named(_, inner_members))
@@ -655,10 +612,7 @@ impl PureAnalyzer {
                     if inner_members.get().is_empty() =>
                 {
                     self.err(
-                        SemanticError::from(format!(
-                            "cannot use type '{}' before it has been defined",
-                            symbol.ctype
-                        )),
+                        SemanticError::from(format!("cannot use type '{}' before it has been defined", symbol.ctype)),
                         location,
                     );
                     // add this as a member anyway because
@@ -714,7 +668,10 @@ impl PureAnalyzer {
                     // struct e; enum e my_e;
                     Some(_) => {
                         // TODO: say what the previous type was
-                        let err = SemanticError::from(format!("use of '{}' with type tag 'enum' that does not match previous struct declaration", name));
+                        let err = SemanticError::from(format!(
+                            "use of '{}' with type tag 'enum' that does not match previous struct declaration",
+                            name
+                        ));
                         self.error_handler.push_back(Locatable::new(err, location));
                         return Type::Error;
                     }
@@ -761,11 +718,7 @@ impl PureAnalyzer {
         }
         if let Some(id) = enum_name {
             // enum e { A }; enum e { A };
-            if self
-                .tag_scope
-                .insert(id, TagEntry::Enum(members.clone()))
-                .is_some()
-            {
+            if self.tag_scope.insert(id, TagEntry::Enum(members.clone())).is_some() {
                 self.err(format!("redefition of enum '{}'", id).into(), location);
             }
         }
@@ -800,19 +753,11 @@ impl PureAnalyzer {
     /// > If a type specifier of the form `struct-or-union identifier`
     /// > occurs other than as part of one of the above forms, and no other declaration of the identifier as a tag is visible,
     /// > then it declares an incomplete structure or union type, and declares the identifier as the tag of that type.
-    fn forward_declaration(
-        &mut self,
-        kind: Keyword,
-        ident: InternedStr,
-        location: Location,
-    ) -> Type {
+    fn forward_declaration(&mut self, kind: Keyword, ident: InternedStr, location: Location) -> Type {
         if kind == Keyword::Enum {
             // see section 6.7.2.3 of the C11 standard
             self.err(
-                SemanticError::from(format!(
-                    "cannot have forward reference to enum type '{}'",
-                    ident
-                )),
+                SemanticError::from(format!("cannot have forward reference to enum type '{}'", ident)),
                 location,
             );
             return Type::Enum(Some(ident), vec![]);
@@ -834,12 +779,7 @@ impl PureAnalyzer {
     /// which we now transform into the recursive `Type`.
     ///
     /// 6.7.6 Declarators
-    fn parse_declarator(
-        &mut self,
-        current: Type,
-        decl: ast::DeclaratorType,
-        location: Location,
-    ) -> Type {
+    fn parse_declarator(&mut self, current: Type, decl: ast::DeclaratorType, location: Location) -> Type {
         use crate::saltwater_parser::data::ast::DeclaratorType::*;
         use crate::saltwater_parser::data::types::{ArrayType, FunctionType};
 
@@ -851,8 +791,7 @@ impl PureAnalyzer {
 
                 let inner = self.parse_declarator(current, *to, location);
                 // we reuse `count_specifiers` even though we really only want the qualifiers
-                let (counter, compounds) =
-                    count_specifiers(qualifiers, &mut self.error_handler, location);
+                let (counter, compounds) = count_specifiers(qualifiers, &mut self.error_handler, location);
                 // *const volatile
                 // TODO: this shouldn't allow `inline` or `_Noreturn`
                 let qualifiers = Qualifiers {
@@ -899,15 +838,9 @@ impl PureAnalyzer {
                 let return_type = self.parse_declarator(current, *func.return_type, location);
                 match &return_type {
                     // int a()[]
-                    Type::Array(_, _) => self.err(
-                        SemanticError::IllegalReturnType(return_type.clone()),
-                        location,
-                    ),
+                    Type::Array(_, _) => self.err(SemanticError::IllegalReturnType(return_type.clone()), location),
                     // int a()()
-                    Type::Function(_) => self.err(
-                        SemanticError::IllegalReturnType(return_type.clone()),
-                        location,
-                    ),
+                    Type::Function(_) => self.err(SemanticError::IllegalReturnType(return_type.clone()), location),
                     _ => {}
                 }
 
@@ -915,8 +848,7 @@ impl PureAnalyzer {
                 let mut params = Vec::new();
                 for param in func.params {
                     // TODO: this location should be that of the param, not of the function
-                    let mut param_type =
-                        self.parse_type(param.specifiers, param.declarator.decl, location);
+                    let mut param_type = self.parse_type(param.specifiers, param.declarator.decl, location);
 
                     // `int f(int a[])` -> `int f(int *a)`
                     if let Type::Array(to, _) = param_type.ctype {
@@ -928,8 +860,7 @@ impl PureAnalyzer {
                     //  adjusted to 'pointer to function returning type', as in 6.3.2.1."
                     // `int f(int g())` -> `int f(int (*g)())`
                     if param_type.ctype.is_function() {
-                        param_type.ctype =
-                            Type::Pointer(Box::new(param_type.ctype), Qualifiers::default());
+                        param_type.ctype = Type::Pointer(Box::new(param_type.ctype), Qualifiers::default());
                     }
 
                     // int a(extern int i)
@@ -957,9 +888,7 @@ impl PureAnalyzer {
                 }
                 // int f(void);
                 let is_void = match params.as_slice() {
-                    [Variable {
-                        ctype: Type::Void, ..
-                    }] => true,
+                    [Variable { ctype: Type::Void, .. }] => true,
                     _ => false,
                 };
                 // int f(void, int) or int f(int, void) or ...
@@ -988,9 +917,9 @@ impl PureAnalyzer {
     // used for arrays like `int a[BUF_SIZE - 1];` and enums like `enum { A = 1 }`
     fn const_literal(expr: Expr) -> CompileResult<LiteralValue> {
         let location = expr.location;
-        expr.const_fold()?.into_literal().map_err(|runtime_expr| {
-            Locatable::new(SemanticError::NotConstant(runtime_expr).into(), location)
-        })
+        expr.const_fold()?
+            .into_literal()
+            .map_err(|runtime_expr| Locatable::new(SemanticError::NotConstant(runtime_expr).into(), location))
     }
     /// Return an unsigned integer that can be evaluated at compile time, or an error otherwise.
     fn const_uint(expr: Expr) -> CompileResult<crate::saltwater_parser::arch::SIZE_T> {
@@ -1001,19 +930,13 @@ impl PureAnalyzer {
             UnsignedInt(i) => Ok(i),
             Int(i) => {
                 if i < 0 {
-                    Err(Locatable::new(
-                        SemanticError::NegativeLength.into(),
-                        location,
-                    ))
+                    Err(Locatable::new(SemanticError::NegativeLength.into(), location))
                 } else {
                     Ok(i as u64)
                 }
             }
             Char(c) => Ok(c.into()),
-            Str(_) | Float(_) => Err(Locatable::new(
-                SemanticError::NonIntegralLength.into(),
-                location,
-            )),
+            Str(_) | Float(_) => Err(Locatable::new(SemanticError::NonIntegralLength.into(), location)),
         }
     }
     /// Return a signed integer that can be evaluated at compile time, or an error otherwise.
@@ -1031,10 +954,7 @@ impl PureAnalyzer {
             },
             Int(i) => Ok(i),
             Char(c) => Ok(c.into()),
-            Str(_) | Float(_) => Err(Locatable::new(
-                SemanticError::NonIntegralLength.into(),
-                location,
-            )),
+            Str(_) | Float(_) => Err(Locatable::new(SemanticError::NonIntegralLength.into(), location)),
         }
     }
     /// Given some variable that we've already parsed (`decl`), perform various checks and add it to the current scope.
@@ -1123,12 +1043,10 @@ impl types::FunctionType {
             // allow 'main(void)'
             [Type::Void] => true,
             // TODO: allow 'int main(int argc, char *argv[], char *environ[])'
-            [Type::Int(true), Type::Pointer(t, _)] | [Type::Int(true), Type::Array(t, _)] => {
-                match &**t {
-                    Type::Pointer(inner, _) => inner.is_char(),
-                    _ => false,
-                }
-            }
+            [Type::Int(true), Type::Pointer(t, _)] | [Type::Int(true), Type::Array(t, _)] => match &**t {
+                Type::Pointer(inner, _) => inner.is_char(),
+                _ => false,
+            },
             _ => false,
         }
     }
@@ -1170,18 +1088,13 @@ struct FunctionData {
 impl FunctionAnalyzer<'_> {
     /// Performs semantic analysis on the function and adds it to `METADATA_STORE`.
     /// Returns the analyzed statements.
-    fn analyze(
-        func: ast::FunctionDefinition,
-        analyzer: &mut PureAnalyzer,
-        location: Location,
-    ) -> (Symbol, Vec<Stmt>) {
+    fn analyze(func: ast::FunctionDefinition, analyzer: &mut PureAnalyzer, location: Location) -> (Symbol, Vec<Stmt>) {
         let parsed_func = analyzer.parse_type(func.specifiers, func.declarator.into(), location);
         // saltwater ignores `inline` and `_Noreturn`
         if parsed_func.qualifiers != Qualifiers::default() {
-            analyzer.error_handler.warn(
-                Warning::FunctionQualifiersIgnored(parsed_func.qualifiers),
-                location,
-            );
+            analyzer
+                .error_handler
+                .warn(Warning::FunctionQualifiersIgnored(parsed_func.qualifiers), location);
         }
         let sc = match parsed_func.storage_class {
             None => StorageClass::Extern,
@@ -1220,20 +1133,13 @@ impl FunctionAnalyzer<'_> {
             let meta = param.get();
             if meta.id == InternedStr::default() && meta.ctype != Type::Void {
                 // int f(int) {}
-                func_analyzer.err(
-                    SemanticError::MissingParamName(i, meta.ctype.clone()),
-                    location,
-                );
+                func_analyzer.err(SemanticError::MissingParamName(i, meta.ctype.clone()), location);
             }
             // TODO: I think this should go through `declare` instead,
             // but that requires having a mutable `Metadata`
             func_analyzer.analyzer.scope.insert(meta.id, param);
         }
-        let stmts = func
-            .body
-            .into_iter()
-            .map(|s| func_analyzer.parse_stmt(s))
-            .collect();
+        let stmts = func.body.into_iter().map(|s| func_analyzer.parse_stmt(s)).collect();
         // TODO: this location should be the end of the function, not the start
         func_analyzer.leave_scope(location);
         assert!(analyzer.tag_scope.is_global());
@@ -1254,18 +1160,16 @@ impl FunctionAnalyzer<'_> {
         for object in self.analyzer.scope.get_all_immediate().values() {
             let object = object.get();
             match &object.ctype {
-                Type::Struct(StructType::Named(name, members))
-                | Type::Union(StructType::Named(name, members)) => {
+                Type::Struct(StructType::Named(name, members)) | Type::Union(StructType::Named(name, members)) => {
                     if members.get().is_empty()
                         // `extern struct s my_s;` and `typedef struct s S;` are fine
                         && object.storage_class != StorageClass::Extern
                         && object.storage_class != StorageClass::Typedef
                     {
                         // struct s my_s;
-                        self.analyzer.error_handler.error(
-                            SemanticError::ForwardDeclarationIncomplete(*name, object.id),
-                            location,
-                        );
+                        self.analyzer
+                            .error_handler
+                            .error(SemanticError::ForwardDeclarationIncomplete(*name, object.id), location);
                     }
                 }
                 _ => {}
@@ -1345,7 +1249,6 @@ pub(crate) mod test {
     use crate::saltwater_parser::data::types::{ArrayType, FunctionType, Type::*};
     use crate::saltwater_parser::lex::PreProcessor;
     use crate::saltwater_parser::parse::test::*;
-    
 
     pub(crate) fn analyze<'c, 'input: 'c, P, A, R, S, E>(
         input: &'input str,
@@ -1376,9 +1279,7 @@ pub(crate) mod test {
     }
 
     pub(crate) fn decls(s: &str) -> Vec<CompileResult<Declaration>> {
-        Analyzer::new(parser(s), false)
-            .map(|o| o.map(|l| l.data))
-            .collect()
+        Analyzer::new(parser(s), false).map(|o| o.map(|l| l.data)).collect()
     }
 
     pub(crate) fn assert_errs_decls(input: &str, errs: usize, warnings: usize, decls: usize) {
@@ -1417,10 +1318,7 @@ pub(crate) mod test {
     }
 
     pub(super) fn assert_same(left: &str, right: &str) {
-        assert_eq!(
-            decl(left).unwrap().to_string(),
-            decl(right).unwrap().to_string()
-        );
+        assert_eq!(decl(left).unwrap().to_string(), decl(right).unwrap().to_string());
     }
     pub(crate) fn assert_no_change(s: &str) {
         assert_decl_display(s, s);
@@ -1456,9 +1354,7 @@ pub(crate) mod test {
                 && left.qualifiers == right.qualifiers
                 && left.id == right.id
         }
-        lexed.map_or(false, |decl| {
-            type_helper(&decl.symbol.get().ctype, &given_type)
-        })
+        lexed.map_or(false, |decl| type_helper(&decl.symbol.get().ctype, &given_type))
     }
 
     #[test]
@@ -1816,10 +1712,7 @@ pub(crate) mod test {
     #[test]
     fn test_multiple() {
         assert_same("int i, j, k;", "int i; int j; int k;");
-        assert_same(
-            "char *p, c, **pp, f();",
-            "char *p; char c; char **p; char f();",
-        );
+        assert_same("char *p, c, **pp, f();", "char *p; char c; char **p; char f();");
     }
     #[test]
     fn test_no_specifiers() {
@@ -1859,10 +1752,7 @@ pub(crate) mod test {
 
     #[test]
     fn extern_redeclaration_of_static_fn_does_not_error() {
-        assert_same(
-            "static int f(); int f();",
-            "static int f(); extern int f();",
-        );
+        assert_same("static int f(); int f();", "static int f(); extern int f();");
 
         // However the opposite should still error
         assert_errs_decls(
@@ -1893,12 +1783,7 @@ pub(crate) mod test {
             decl("enum { A = -5, B, C = 2, D } E;"),
             Type::Enum(
                 None,
-                vec![
-                    ("A".into(), -5),
-                    ("B".into(), -4),
-                    ("C".into(), 2),
-                    ("D".into(), 3)
-                ]
+                vec![("A".into(), -5), ("B".into(), -4), ("C".into(), 2), ("D".into(), 3)]
             )
         ));
     }
@@ -1906,10 +1791,7 @@ pub(crate) mod test {
     #[test]
     fn typedef_signed() {
         let mut ds = decls("typedef unsigned uint; uint i;").into_iter();
-        assert_eq!(
-            ds.next().unwrap().unwrap().to_string(),
-            "typedef unsigned int uint;"
-        );
+        assert_eq!(ds.next().unwrap().unwrap().to_string(), "typedef unsigned int uint;");
         assert_decl_display("unsigned int i;", &ds.next().unwrap().unwrap().to_string());
     }
     #[test]

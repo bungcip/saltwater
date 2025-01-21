@@ -431,11 +431,9 @@ impl StmtType {
             StmtType::Label(id, inner) => write!(f, "{}: {}", id, inner.data),
             StmtType::While(condition, body) => write!(f, "while ({}) {}", condition, body.data),
             StmtType::If(condition, body, None) => write!(f, "if ({}) {}", condition, body.data),
-            StmtType::If(condition, body, Some(otherwise)) => write!(
-                f,
-                "if ({}) {} else {}",
-                condition, body.data, otherwise.data
-            ),
+            StmtType::If(condition, body, Some(otherwise)) => {
+                write!(f, "if ({}) {} else {}", condition, body.data, otherwise.data)
+            }
             StmtType::Do(body, condition) => {
                 write!(f, "do {:?} while ({:?});", body.data, condition)
             }
@@ -596,12 +594,11 @@ mod tests {
             "struct s",
         ];
         for ty in types.iter() {
-            let printed_type_name =
-                analyze(*ty, Parser::type_name, |a, Locatable { data, location }| {
-                    PureAnalyzer::parse_typename_test(a, data, location)
-                })
-                .unwrap()
-                .to_string();
+            let printed_type_name = analyze(*ty, Parser::type_name, |a, Locatable { data, location }| {
+                PureAnalyzer::parse_typename_test(a, data, location)
+            })
+            .unwrap()
+            .to_string();
 
             assert_eq!(*ty, printed_type_name);
         }

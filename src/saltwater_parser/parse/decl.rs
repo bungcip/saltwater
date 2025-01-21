@@ -1,7 +1,6 @@
 use super::*;
 use crate::saltwater_parser::data::ast::{
-    self, Declaration, DeclarationSpecifier, Declarator, Expr, ExternalDeclaration, Initializer,
-    TypeName,
+    self, Declaration, DeclarationSpecifier, Declarator, Expr, ExternalDeclaration, Initializer, TypeName,
 };
 use crate::saltwater_parser::data::error::Warning;
 use crate::saltwater_parser::data::*;
@@ -10,16 +9,9 @@ use std::convert::{TryFrom, TryInto};
 #[derive(Debug)]
 enum InternalDeclaratorType {
     Id(InternedStr),
-    Pointer {
-        qualifiers: Vec<DeclarationSpecifier>,
-    },
-    Array {
-        size: Option<Box<Expr>>,
-    },
-    Function {
-        params: Vec<TypeName>,
-        varargs: bool,
-    },
+    Pointer { qualifiers: Vec<DeclarationSpecifier> },
+    Array { size: Option<Box<Expr>> },
+    Function { params: Vec<TypeName>, varargs: bool },
 }
 
 #[derive(Debug)]
@@ -103,10 +95,7 @@ impl<I: Lexer> Parser<I> {
             specifiers,
             declarators: decls,
         };
-        Ok(Locatable::new(
-            ExternalDeclaration::Declaration(declaration),
-            location,
-        ))
+        Ok(Locatable::new(ExternalDeclaration::Declaration(declaration), location))
     }
     pub(crate) fn type_name(&mut self) -> SyntaxResult<Locatable<TypeName>> {
         use crate::saltwater_parser::ast::DeclaratorType;
@@ -133,10 +122,7 @@ impl<I: Lexer> Parser<I> {
             }
             Some(l) => l,
         };
-        let type_name = TypeName {
-            specifiers,
-            declarator,
-        };
+        let type_name = TypeName { specifiers, declarator };
         Ok(Locatable::new(type_name, location))
     }
     fn specifiers(&mut self) -> SyntaxResult<(Vec<DeclarationSpecifier>, Option<Location>)> {
@@ -276,10 +262,7 @@ impl<I: Lexer> Parser<I> {
             specifiers,
             declarators,
         };
-        Ok(Locatable::new(
-            decl_list,
-            location.maybe_merge(spec_location),
-        ))
+        Ok(Locatable::new(decl_list, location.maybe_merge(spec_location)))
     }
     /// ```yacc
     /// enum_specifier
@@ -305,10 +288,7 @@ impl<I: Lexer> Parser<I> {
     /// <http://www.quut.com/c/ANSI-C-grammar-y.html#enum_specifier>
 
     // we've already seen an `enum` token,, `location` is where we saw it
-    fn enum_specifier(
-        &mut self,
-        mut location: Location,
-    ) -> SyntaxResult<Locatable<DeclarationSpecifier>> {
+    fn enum_specifier(&mut self, mut location: Location) -> SyntaxResult<Locatable<DeclarationSpecifier>> {
         let name = self.match_id().map(|id| {
             location = location.merge(id.location);
             id.data
@@ -338,10 +318,7 @@ impl<I: Lexer> Parser<I> {
         } else {
             None
         };
-        let decl = DeclarationSpecifier::Enum {
-            name,
-            members: body,
-        };
+        let decl = DeclarationSpecifier::Enum { name, members: body };
         Ok(Locatable::new(decl, location))
     }
 
@@ -379,10 +356,7 @@ impl<I: Lexer> Parser<I> {
             })
         }
     }
-    fn declarator(
-        &mut self,
-        allow_abstract: bool,
-    ) -> SyntaxResult<Option<Locatable<InternalDeclarator>>> {
+    fn declarator(&mut self, allow_abstract: bool) -> SyntaxResult<Option<Locatable<InternalDeclarator>>> {
         let mut pointer_decls = Vec::new();
         // NOTE: outdated comment
         // decls coming earlier in the Vec have lower precedence than the ones coming later
@@ -461,10 +435,7 @@ impl<I: Lexer> Parser<I> {
      *   parameter_type_list starts with declaration specifiers, abstract_declarator doesn't:
      *   https://stackoverflow.com/questions/56410673/how-should-int-fint-be-parsed
      */
-    fn direct_declarator(
-        &mut self,
-        allow_abstract: bool,
-    ) -> SyntaxResult<Option<Locatable<InternalDeclarator>>> {
+    fn direct_declarator(&mut self, allow_abstract: bool) -> SyntaxResult<Option<Locatable<InternalDeclarator>>> {
         let _guard = self.recursion_check();
         // we'll pass this to postfix_type in just a second
         // if None, we didn't find an ID
@@ -561,19 +532,16 @@ impl<I: Lexer> Parser<I> {
                     self.expect(Token::LeftBracket).unwrap();
                     if let Some(token) = self.match_next(&Token::Keyword(Keyword::Static)) {
                         if !allow_abstract {
-                            self.error_handler.push_back(Locatable::new(
-                                SyntaxError::StaticInConcreteArray,
-                                token.location,
-                            ));
+                            self.error_handler
+                                .push_back(Locatable::new(SyntaxError::StaticInConcreteArray, token.location));
                         }
                     }
-                    let (size, location) =
-                        if let Some(token) = self.match_next(&Token::RightBracket) {
-                            (None, token.location)
-                        } else {
-                            let expr = Box::new(self.expr()?);
-                            (Some(expr), self.expect(Token::RightBracket)?.location)
-                        };
+                    let (size, location) = if let Some(token) = self.match_next(&Token::RightBracket) {
+                        (None, token.location)
+                    } else {
+                        let expr = Box::new(self.expr()?);
+                        (Some(expr), self.expect(Token::RightBracket)?.location)
+                    };
                     Locatable::new(InternalDeclaratorType::Array { size }, location)
                 }
                 Token::LeftParen => self.parameter_type_list()?,
@@ -613,10 +581,7 @@ impl<I: Lexer> Parser<I> {
         let mut params = vec![];
         if let Some(right_paren) = self.match_next(&Token::RightParen) {
             return Ok(Locatable::new(
-                InternalDeclaratorType::Function {
-                    params,
-                    varargs: false,
-                },
+                InternalDeclaratorType::Function { params, varargs: false },
                 left_paren.merge(right_paren.location),
             ));
         }
@@ -624,10 +589,7 @@ impl<I: Lexer> Parser<I> {
             if self.match_next(&Token::Ellipsis).is_some() {
                 let right_paren = self.expect(Token::RightParen)?.location;
                 return Ok(Locatable::new(
-                    InternalDeclaratorType::Function {
-                        params,
-                        varargs: true,
-                    },
+                    InternalDeclaratorType::Function { params, varargs: true },
                     left_paren.merge(right_paren),
                 ));
             }
@@ -637,10 +599,7 @@ impl<I: Lexer> Parser<I> {
                 let right_paren = self.expect(Token::RightParen)?.location;
                 let location = left_paren.merge(right_paren);
                 return Ok(Locatable::new(
-                    InternalDeclaratorType::Function {
-                        params,
-                        varargs: false,
-                    },
+                    InternalDeclaratorType::Function { params, varargs: false },
                     location,
                 ));
             }
@@ -803,7 +762,9 @@ pub(crate) mod test {
     #[test]
     fn username() {
         assert_no_change("int (*(*jynelson)(int (*)(int)));");
-        assert_no_change("const int (*volatile (*restrict jynelson)(_Atomic int (*const volatile )(_Thread_local int)));")
+        assert_no_change(
+            "const int (*volatile (*restrict jynelson)(_Atomic int (*const volatile )(_Thread_local int)));",
+        )
     }
     #[test]
     fn test_precedence() {

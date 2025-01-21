@@ -33,9 +33,9 @@ impl<I: Lexer> Parser<I> {
         }
         if self.expect(Token::RightBrace).is_err() {
             assert!(self.peek_token().is_none()); // from the 'break' above
-            let actual_err = self.last_location.with(SyntaxError::Generic(
-                "unclosed '{' delimeter at end of file".into(),
-            ));
+            let actual_err = self
+                .last_location
+                .with(SyntaxError::Generic("unclosed '{' delimeter at end of file".into()));
             pending_errs.push(actual_err);
         }
         if let Some(err) = pending_errs.pop() {
@@ -126,11 +126,9 @@ impl<I: Lexer> Parser<I> {
                 Keyword::Return => self.return_statement(),
 
                 // start of an expression statement
-                Keyword::Sizeof
-                | Keyword::StaticAssert
-                | Keyword::Alignas
-                | Keyword::Alignof
-                | Keyword::Generic => self.expression_statement(),
+                Keyword::Sizeof | Keyword::StaticAssert | Keyword::Alignas | Keyword::Alignof | Keyword::Generic => {
+                    self.expression_statement()
+                }
                 decl if decl.is_decl_specifier() => self.declaration(),
                 other => {
                     let err = SyntaxError::NotAStatement(*other);
@@ -187,9 +185,7 @@ impl<I: Lexer> Parser<I> {
         let ret_token = self.expect(Token::Keyword(Keyword::Return)).unwrap();
         let expr = self.expr_opt(Token::Semicolon)?;
         Ok(Stmt {
-            location: ret_token
-                .location
-                .maybe_merge(expr.as_ref().map(|l| l.location)),
+            location: ret_token.location.maybe_merge(expr.as_ref().map(|l| l.location)),
             data: StmtType::Return(expr),
         })
     }
@@ -246,9 +242,7 @@ impl<I: Lexer> Parser<I> {
     fn do_while_statement(&mut self) -> StmtResult {
         let start = self
             .expect(Token::Keyword(Keyword::Do))
-            .unwrap_or_else(|_| {
-                panic!("do_while_statement should only be called with `do` as next token")
-            });
+            .unwrap_or_else(|_| panic!("do_while_statement should only be called with `do` as next token"));
         let body = self.statement()?;
         self.expect(Token::Keyword(Keyword::While))?;
         self.expect(Token::LeftParen)?;
@@ -309,9 +303,7 @@ impl<I: Lexer> Parser<I> {
             }
             Some(_) => expr_opt(self)?,
             None => {
-                return Err(self
-                    .last_location
-                    .with(SyntaxError::EndOfFile("expression or ';'")));
+                return Err(self.last_location.with(SyntaxError::EndOfFile("expression or ';'")));
             }
         };
         let initializer = Box::new(Stmt {
@@ -419,10 +411,7 @@ mod tests {
             "for (int i = 0; i < 10; ++i);",
             "for (int i = 0; (i) < (10); ++(i)) {\n}",
         );
-        assert_stmt_display(
-            "for (int i = 0, j = 5; ;);",
-            "for (int i = 0, j = 5; ;) {\n}",
-        );
+        assert_stmt_display("for (int i = 0, j = 5; ;);", "for (int i = 0, j = 5; ;) {\n}");
         assert_stmt_display("for (;;);", "for (;;) {\n}");
         assert_no_change("for (;;) {\n}");
     }

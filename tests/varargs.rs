@@ -35,10 +35,7 @@ fn printf_helper(format: &str, args: &[&str]) {
         .env("LC_ALL", "C")
         .output()
         .expect("printf is not installed or syntax is incorrect");
-    info!(
-        "system printf thinks {:?} should be {:?}",
-        all_args, expected
-    );
+    info!("system printf thinks {:?} should be {:?}", all_args, expected);
 
     let quoted = format!("\"{}\"", all_args[0]);
     all_args[0] = &quoted;

@@ -2,36 +2,25 @@ use cranelift::codegen::cursor::Cursor;
 use cranelift::frontend::Switch;
 use cranelift::prelude::{Block, FunctionBuilder, InstBuilder};
 
-
-
-
-use super::{Compiler, BlockState};
+use super::{BlockState, Compiler};
 use crate::saltwater_parser::data::{
     hir::{Expr, Stmt, StmtType},
     *,
 };
 
 impl Compiler {
-    pub(super) fn compile_all(
-        &mut self,
-        stmts: Vec<Stmt>,
-        builder: &mut FunctionBuilder,
-    ) -> CompileResult<()> {
+    pub(super) fn compile_all(&mut self, stmts: Vec<Stmt>, builder: &mut FunctionBuilder) -> CompileResult<()> {
         for stmt in stmts {
             self.compile_stmt(stmt, builder)?;
         }
         Ok(())
     }
 
-    pub(super) fn compile_stmt(&mut self,
-        stmt: Stmt,
-        builder: &mut FunctionBuilder,
-    ) -> CompileResult<()> {
-        
+    pub(super) fn compile_stmt(&mut self, stmt: Stmt, builder: &mut FunctionBuilder) -> CompileResult<()> {
         if self.current_block_state == BlockState::Filled && !is_jump_target(&stmt.data) {
             return Err(stmt.location.error(SemanticError::UnreachableStatement));
         }
-        
+
         match stmt.data {
             StmtType::Compound(stmts) => self.compile_all(stmts, builder),
             // INVARIANT: symbol has not yet been declared in this scope
@@ -55,9 +44,7 @@ impl Compiler {
                 self.current_block_state = BlockState::Filled;
                 Ok(())
             }
-            StmtType::If(condition, body, otherwise) => {
-                self.if_stmt(condition, *body, otherwise, builder)
-            }
+            StmtType::If(condition, body, otherwise) => self.if_stmt(condition, *body, otherwise, builder),
             StmtType::While(condition, body) => self.while_stmt(Some(condition), *body, builder),
             StmtType::Break | StmtType::Continue => {
                 self.loop_exit(stmt.data == StmtType::Break, stmt.location, builder)
@@ -77,9 +64,7 @@ impl Compiler {
                 self.jump_to_block(new_block, builder);
                 self.switch_to_block(new_block, builder);
                 if let Some(previous) = self.labels.insert(name, new_block) {
-                    Err(stmt
-                        .location
-                        .error(SemanticError::LabelRedeclaration(previous)))
+                    Err(stmt.location.error(SemanticError::LabelRedeclaration(previous)))
                 } else {
                     self.compile_stmt(*inner, builder)
                 }
@@ -91,14 +76,10 @@ impl Compiler {
                 }
                 None => Err(stmt.location.error(SemanticError::UndeclaredLabel(name))),
             },
-            StmtType::Case(constexpr, inner) => {
-                self.case(constexpr.into(), *inner, stmt.location, builder)
-            }
+            StmtType::Case(constexpr, inner) => self.case(constexpr.into(), *inner, stmt.location, builder),
             StmtType::Default(inner) => self.default(*inner, stmt.location, builder),
         }
-
     }
-
 
     fn if_stmt(
         &mut self,
@@ -151,7 +132,8 @@ impl Compiler {
     /// - Switch to the start block
     /// - Return (start, end, previous_last_saw_loop)
     fn enter_loop(&mut self, builder: &mut FunctionBuilder) -> (Block, Block, Block, bool) {
-        let (header_body, loop_body, end_body) = (builder.create_block(), builder.create_block(), builder.create_block());
+        let (header_body, loop_body, end_body) =
+            (builder.create_block(), builder.create_block(), builder.create_block());
         self.loops.push((loop_body, end_body));
         let old_saw_loop = self.last_saw_loop;
         self.last_saw_loop = true;
@@ -178,14 +160,13 @@ impl Compiler {
         if let Some(condition) = maybe_condition {
             let condition = self.compile_expr(condition, builder)?;
             builder.ins().brif(condition.ir_val, loop_body, &[], end_body, &[]);
-        }else{
+        } else {
             self.jump_to_block(loop_body, builder);
         }
 
         self.switch_to_block(loop_body, builder);
         self.compile_stmt(body, builder)?;
         self.jump_to_block(header_body, builder);
-
 
         self.switch_to_block(end_body, builder);
         self.exit_loop(old_saw_loop);
@@ -199,19 +180,12 @@ impl Compiler {
     //     self.switch_to_block(bb, builder);
     // }
 
-    fn do_loop(
-        &mut self,
-        body: Stmt,
-        condition: Expr,
-        builder: &mut FunctionBuilder,
-    ) -> CompileResult<()> {
+    fn do_loop(&mut self, body: Stmt, condition: Expr, builder: &mut FunctionBuilder) -> CompileResult<()> {
         let (header_body, loop_body, end_body, old_saw_loop) = self.enter_loop(builder);
 
         self.compile_stmt(body, builder)?;
         if self.current_block_state == BlockState::Filled {
-            return Err(condition
-                .location
-                .error(SemanticError::UnreachableStatement));
+            return Err(condition.location.error(SemanticError::UnreachableStatement));
         }
         self.jump_to_block(loop_body, builder);
 
@@ -254,12 +228,7 @@ impl Compiler {
         }
         self.while_stmt(condition, body, builder)
     }
-    fn switch(
-        &mut self,
-        condition: Expr,
-        body: Stmt,
-        builder: &mut FunctionBuilder,
-    ) -> CompileResult<()> {
+    fn switch(&mut self, condition: Expr, body: Stmt, builder: &mut FunctionBuilder) -> CompileResult<()> {
         let cond_val = self.compile_expr(condition, builder)?;
         // works around https://github.com/CraneStation/cranelift/issues/1057
         // instead of switching to back to the current block to emit the Switch,
@@ -273,8 +242,7 @@ impl Compiler {
         let old_saw_loop = self.last_saw_loop;
         self.last_saw_loop = false;
 
-        self.switches
-            .push((Switch::new(), None, builder.create_block()));
+        self.switches.push((Switch::new(), None, builder.create_block()));
         self.compile_stmt(body, builder)?;
         let (switch, default, end) = self.switches.pop().unwrap();
         self.last_saw_loop = old_saw_loop;
@@ -283,15 +251,10 @@ impl Compiler {
 
         self.switch_to_block(dummy_block, builder);
 
-
         switch.emit(
             builder,
             cond_val.ir_val,
-            if let Some(default) = default {
-                default
-            } else {
-                end
-            },
+            if let Some(default) = default { default } else { end },
         );
         self.switch_to_block(end, builder);
         Ok(())
@@ -305,9 +268,7 @@ impl Compiler {
     ) -> CompileResult<()> {
         let (switch, _, _) = match self.switches.last_mut() {
             Some(x) => x,
-            None => {
-                return Err(location.error(SemanticError::CaseOutsideSwitch { is_default: false }))
-            }
+            None => return Err(location.error(SemanticError::CaseOutsideSwitch { is_default: false })),
         };
 
         if switch.entries().contains_key(&constexpr) {
@@ -326,17 +287,9 @@ impl Compiler {
         self.compile_stmt(stmt, builder)
     }
 
-    fn default(
-        &mut self,
-        inner: Stmt,
-        location: Location,
-        builder: &mut FunctionBuilder,
-    ) -> CompileResult<()> {
-
+    fn default(&mut self, inner: Stmt, location: Location, builder: &mut FunctionBuilder) -> CompileResult<()> {
         match self.switches.last() {
-            Some((_, Some(_), _)) => {
-                return Err(location.error(SemanticError::DuplicateCase { is_default: true }))
-            },
+            Some((_, Some(_), _)) => return Err(location.error(SemanticError::DuplicateCase { is_default: true })),
             Some(_) => (),
             None => {
                 return Err(location.error(SemanticError::CaseOutsideSwitch { is_default: true }));
@@ -358,12 +311,7 @@ impl Compiler {
         self.compile_stmt(inner, builder)
     }
 
-    fn loop_exit(
-        &mut self,
-        is_break: bool,
-        location: Location,
-        builder: &mut FunctionBuilder,
-    ) -> CompileResult<()> {
+    fn loop_exit(&mut self, is_break: bool, location: Location, builder: &mut FunctionBuilder) -> CompileResult<()> {
         if self.last_saw_loop {
             // break from loop
             if let Some((loop_start, loop_end)) = self.loops.last() {
@@ -410,7 +358,6 @@ impl Compiler {
     // fn seal_block(&self, block: Block, builder: &mut FunctionBuilder) {
     //     builder.seal_block(block)
     // }
-
 }
 
 fn is_jump_target(stmt: &StmtType) -> bool {

@@ -91,9 +91,7 @@ impl PureAnalyzer {
             // the elements or members of the subaggregate or the contained union.
             let next = match elem {
                 Aggregate(_) => match list.next() {
-                    Some(Aggregate(inner_list)) => {
-                        self.check_aggregate_overflow(inner_list, &inner, location)
-                    }
+                    Some(Aggregate(inner_list)) => self.check_aggregate_overflow(inner_list, &inner, location),
                     _ => unreachable!(),
                 },
                 Scalar(_) => {
@@ -108,10 +106,9 @@ impl PureAnalyzer {
                     // int a[][3] = {{1,2,3}}
                     } else {
                         let expr = match list.next() {
-                            Some(Scalar(expr)) => self
-                                .expr(*expr)
-                                .rval()
-                                .implicit_cast(&inner, &mut self.error_handler),
+                            Some(Scalar(expr)) => {
+                                self.expr(*expr).rval().implicit_cast(&inner, &mut self.error_handler)
+                            }
                             _ => unreachable!(),
                         };
                         Initializer::Scalar(Box::new(expr))
@@ -158,10 +155,7 @@ impl Type {
                 if index == 0 {
                     Ok(ty.clone())
                 } else {
-                    Err(SemanticError::AggregateInitializingScalar(
-                        ty.clone(),
-                        index + 1,
-                    ))
+                    Err(SemanticError::AggregateInitializingScalar(ty.clone(), index + 1))
                 }
             }
             Type::Array(inner, _) => Ok((**inner).clone()),
@@ -177,10 +171,7 @@ impl Type {
                     return Err("can only initialize first member of an enum".into());
                 }
                 let members = struct_type.members();
-                Ok(members
-                    .first()
-                    .map(|m| m.ctype.clone())
-                    .unwrap_or(Type::Error))
+                Ok(members.first().map(|m| m.ctype.clone()).unwrap_or(Type::Error))
             }
             Type::Function { .. } | Type::Error => Ok(Type::Error),
             _ => unimplemented!("type checking for aggregate initializers of type {}", self),
@@ -239,10 +230,7 @@ mod test {
     #[test]
     fn test_initializers_more() {
         assert_same("int a[][3] = {1,2,3};", "int a[][3] = {{ 1, 2, 3 }};");
-        assert_same(
-            "int a[][3] = {1,2,3,4};",
-            "int a[][3] = {{ 1, 2, 3 }, { 4 } };",
-        );
+        assert_same("int a[][3] = {1,2,3,4};", "int a[][3] = {{ 1, 2, 3 }, { 4 } };");
         assert_same(
             "struct { int i; float f; } s = {1, 1.2};",
             "struct { int i; float f; } s = {(int)1, (float)1.2};",

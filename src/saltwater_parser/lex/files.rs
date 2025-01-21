@@ -46,11 +46,7 @@ impl Iterator for FileProcessor {
 }
 
 impl FileProcessor {
-    pub(super) fn new(
-        chars: impl Into<ArcStr>,
-        filename: impl Into<std::ffi::OsString>,
-        debug: bool,
-    ) -> Self {
+    pub(super) fn new(chars: impl Into<ArcStr>, filename: impl Into<std::ffi::OsString>, debug: bool) -> Self {
         let mut files = Files::new();
         let chars = chars.into();
         let filename = filename.into();
@@ -87,8 +83,7 @@ impl FileProcessor {
     pub(super) fn add_file(&mut self, filename: PathBuf, source: Source) {
         let code = ArcStr::clone(&source.code);
         let id = self.files.add(filename, source);
-        self.includes
-            .push(Lexer::new(id, code, self.first_lexer.debug));
+        self.includes.push(Lexer::new(id, code, self.first_lexer.debug));
     }
 
     /// Return a `Location` representing the end of the first file.
@@ -144,10 +139,7 @@ impl FileProcessor {
     ///
     /// Note that these are _tokens_ and not bytes, so if there are invalid tokens
     /// on the current line, this will return a lex error.
-    pub(super) fn tokens_until_newline(
-        &mut self,
-        whitespace: bool,
-    ) -> Vec<CompileResult<Locatable<Token>>> {
+    pub(super) fn tokens_until_newline(&mut self, whitespace: bool) -> Vec<CompileResult<Locatable<Token>>> {
         let mut tokens = Vec::new();
         loop {
             let ws_start = self.offset();

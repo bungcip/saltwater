@@ -10,11 +10,7 @@ use log::debug;
 #[test]
 fn run_all() -> Result<(), io::Error> {
     let _ = env_logger::try_init();
-    assert!(Command::new("cargo")
-        .arg("build")
-        .status()
-        .unwrap()
-        .success());
+    assert!(Command::new("cargo").arg("build").status().unwrap().success());
     for maybe_file in walkdir::WalkDir::new("tests/stack-overflow").follow_links(true) {
         debug!("file is {:?}", &maybe_file);
         let file = maybe_file?;

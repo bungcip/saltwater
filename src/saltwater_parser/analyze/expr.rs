@@ -20,22 +20,12 @@ impl PureAnalyzer {
                 self.explicit_cast(*inner, ctype)
             }
             Shift(left, right, direction) => {
-                let op = if direction {
-                    BinaryOp::Shl
-                } else {
-                    BinaryOp::Shr
-                };
+                let op = if direction { BinaryOp::Shl } else { BinaryOp::Shr };
                 self.binary_helper(left, right, op, Self::parse_integer_op)
             }
-            BitwiseAnd(left, right) => {
-                self.binary_helper(left, right, BinaryOp::BitwiseAnd, Self::parse_integer_op)
-            }
-            BitwiseOr(left, right) => {
-                self.binary_helper(left, right, BinaryOp::BitwiseOr, Self::parse_integer_op)
-            }
-            Xor(left, right) => {
-                self.binary_helper(left, right, BinaryOp::Xor, Self::parse_integer_op)
-            }
+            BitwiseAnd(left, right) => self.binary_helper(left, right, BinaryOp::BitwiseAnd, Self::parse_integer_op),
+            BitwiseOr(left, right) => self.binary_helper(left, right, BinaryOp::BitwiseOr, Self::parse_integer_op),
+            Xor(left, right) => self.binary_helper(left, right, BinaryOp::Xor, Self::parse_integer_op),
             Compare(left, right, token) => self.relational_expr(*left, *right, token),
             Mul(left, right) => self.binary_helper(left, right, BinaryOp::Mul, Self::mul),
             Div(left, right) => self.binary_helper(left, right, BinaryOp::Div, Self::mul),
@@ -86,10 +76,7 @@ impl PureAnalyzer {
                     }
                     Type::Error => inner,
                     _ => {
-                        self.err(
-                            SemanticError::NotAPointer(inner.ctype.clone()),
-                            expr.location,
-                        );
+                        self.err(SemanticError::NotAPointer(inner.ctype.clone()), expr.location);
                         inner
                     }
                 }
@@ -129,13 +116,9 @@ impl PureAnalyzer {
                 }
             }
             // ++x
-            PreIncrement(inner, increment) => {
-                self.increment_op(true, increment, *inner, expr.location)
-            }
+            PreIncrement(inner, increment) => self.increment_op(true, increment, *inner, expr.location),
             // x++
-            PostIncrement(inner, increment) => {
-                self.increment_op(false, increment, *inner, expr.location)
-            }
+            PostIncrement(inner, increment) => self.increment_op(false, increment, *inner, expr.location),
             // a[i]
             Index(left, right) => self.index(*left, *right, expr.location),
             AlignofType(type_name) => {
@@ -160,13 +143,9 @@ impl PureAnalyzer {
             // !x
             LogicalNot(inner) => self.logical_not(*inner),
             // x && y
-            LogicalAnd(left, right) => {
-                self.binary_helper(left, right, BinaryOp::LogicalAnd, Self::logical_bin_op)
-            }
+            LogicalAnd(left, right) => self.binary_helper(left, right, BinaryOp::LogicalAnd, Self::logical_bin_op),
             // x || y
-            LogicalOr(left, right) => {
-                self.binary_helper(left, right, BinaryOp::LogicalOr, Self::logical_bin_op)
-            }
+            LogicalOr(left, right) => self.binary_helper(left, right, BinaryOp::LogicalOr, Self::logical_bin_op),
             // x, y
             // evaluate x, discarding its value, then yield the value of y
             // mostly used to have multiple side effects in a single statement, such as in a for loop:
@@ -182,22 +161,14 @@ impl PureAnalyzer {
                     location: expr.location,
                 }
             }
-            Ternary(condition, then, otherwise) => {
-                self.ternary(*condition, *then, *otherwise, expr.location)
-            }
+            Ternary(condition, then, otherwise) => self.ternary(*condition, *then, *otherwise, expr.location),
         }
     }
     // only meant for use with `expr`
     // TODO: change ast::Expr to use `ExprType::Binary` as well, which would make this unnecessary
     // TODO: these functions should have the locations of the parent expression, not the children
     #[allow(clippy::boxed_local)]
-    fn binary_helper<F>(
-        &mut self,
-        left: Box<ast::Expr>,
-        right: Box<ast::Expr>,
-        op: BinaryOp,
-        expr_checker: F,
-    ) -> Expr
+    fn binary_helper<F>(&mut self, left: Box<ast::Expr>, right: Box<ast::Expr>, op: BinaryOp, expr_checker: F) -> Expr
     where
         F: FnOnce(&mut Self, Expr, Expr, BinaryOp) -> Expr,
     {
@@ -272,12 +243,7 @@ impl PureAnalyzer {
     }
     // `left == right`, `left < right`, or similar
     // 6.5.9 Equality operators
-    fn relational_expr(
-        &mut self,
-        left: ast::Expr,
-        right: ast::Expr,
-        token: ComparisonToken,
-    ) -> Expr {
+    fn relational_expr(&mut self, left: ast::Expr, right: ast::Expr, token: ComparisonToken) -> Expr {
         let location = left.location.merge(right.location);
         let mut left = self.expr(left);
         let mut right = self.expr(right);
@@ -307,11 +273,7 @@ impl PureAnalyzer {
                         || (left_expr.ctype.is_pointer() && right_expr.is_null()))))
             {
                 self.err(
-                    SemanticError::InvalidRelationalType(
-                        token,
-                        left_expr.ctype.clone(),
-                        right_expr.ctype.clone(),
-                    ),
+                    SemanticError::InvalidRelationalType(token, left_expr.ctype.clone(), right_expr.ctype.clone()),
                     location,
                 );
             }
@@ -394,8 +356,7 @@ impl PureAnalyzer {
             (left.ctype.clone(), false)
         // `p1 - p2`
         // `p1 + p2` for pointers p1 and p2 is not valid
-        } else if !is_add && left.ctype.is_pointer_to_complete_object() && left.ctype == right.ctype
-        {
+        } else if !is_add && left.ctype.is_pointer_to_complete_object() && left.ctype == right.ctype {
             // not sure what type to use here, C11 standard doesn't mention it
             (left.ctype.clone(), true)
         } else {
@@ -457,13 +418,7 @@ impl PureAnalyzer {
     }
     // `base + index`, where `pointee` is the type of `*base`
     // 6.5.6 Additive operators
-    fn pointer_arithmetic(
-        &mut self,
-        base: Expr,
-        index: Expr,
-        pointee: &Type,
-        location: Location,
-    ) -> Expr {
+    fn pointer_arithmetic(&mut self, base: Expr, index: Expr, pointee: &Type, location: Location) -> Expr {
         // the idea is to desugar to `base + sizeof(base)*index`
         let offset = Expr {
             lval: false,
@@ -475,10 +430,7 @@ impl PureAnalyzer {
         let size = match pointee.sizeof() {
             Ok(s) => s,
             Err(_) => {
-                self.err(
-                    SemanticError::PointerAddUnknownSize(base.ctype.clone()),
-                    location,
-                );
+                self.err(SemanticError::PointerAddUnknownSize(base.ctype.clone()), location);
                 1
             }
         };
@@ -536,19 +488,14 @@ impl PureAnalyzer {
             // `int f(int); f()` or `int f(int); f(1, 2)`
             && (args.len() < expected || args.len() > expected && !functype.varargs)
         {
-            self.err(
-                SemanticError::WrongArgumentNumber(args.len(), expected),
-                func.location,
-            );
+            self.err(SemanticError::WrongArgumentNumber(args.len(), expected), func.location);
         }
         let mut promoted_args = vec![];
         for (i, arg) in args.into_iter().enumerate() {
             let arg = self.expr(arg);
             let promoted = match functype.params.get(i) {
                 // int f(int); f(1)
-                Some(expected) => arg
-                    .rval()
-                    .implicit_cast(&expected.get().ctype, &mut self.error_handler),
+                Some(expected) => arg.rval().implicit_cast(&expected.get().ctype, &mut self.error_handler),
                 // `int f(); f(1)` or `int f(int, ...); f(1, 2)`
                 None => self.default_promote(arg),
             };
@@ -576,10 +523,7 @@ impl PureAnalyzer {
                 let members = stype.members();
                 // struct s; s.a
                 if members.is_empty() {
-                    self.err(
-                        SemanticError::IncompleteDefinitionUsed(expr.ctype.clone()),
-                        location,
-                    );
+                    self.err(SemanticError::IncompleteDefinitionUsed(expr.ctype.clone()), location);
                     expr
                 // struct s { int i; }; s.i
                 } else if let Some(member) = members.iter().find(|member| member.id == id) {
@@ -606,13 +550,7 @@ impl PureAnalyzer {
     }
     // ++i, i--
     // 6.5.2.4 Postfix increment and decrement operators
-    fn increment_op(
-        &mut self,
-        prefix: bool,
-        increment: bool,
-        expr: ast::Expr,
-        location: Location,
-    ) -> Expr {
+    fn increment_op(&mut self, prefix: bool, increment: bool, expr: ast::Expr, location: Location) -> Expr {
         use crate::saltwater_parser::data::lex::AssignmentToken;
 
         let expr = self.expr(expr);
@@ -621,10 +559,7 @@ impl PureAnalyzer {
         } else if !(expr.ctype.is_arithmetic() || expr.ctype.is_pointer()) {
             // check if already encountered type error
             if expr.ctype != Type::Error {
-                self.err(
-                    SemanticError::InvalidIncrement(expr.ctype.clone()),
-                    expr.location,
-                );
+                self.err(SemanticError::InvalidIncrement(expr.ctype.clone()), expr.location);
             }
         }
         // ++i is syntactic sugar for i+=1
@@ -706,10 +641,7 @@ impl PureAnalyzer {
         if !expr.ctype.is_integral() {
             // check if already error
             if expr.ctype != Type::Error {
-                self.err(
-                    SemanticError::NonIntegralExpr(expr.ctype.clone()),
-                    expr.location,
-                );
+                self.err(SemanticError::NonIntegralExpr(expr.ctype.clone()), expr.location);
             }
             expr
         } else {
@@ -784,13 +716,7 @@ impl PureAnalyzer {
     }
     // condition ? then : otherwise
     // like an `if` in Rust: evaluate `condition`, yield the value of `then` if true, otherwise yield the value of `otherwise`
-    fn ternary(
-        &mut self,
-        condition: ast::Expr,
-        then: ast::Expr,
-        otherwise: ast::Expr,
-        location: Location,
-    ) -> Expr {
+    fn ternary(&mut self, condition: ast::Expr, then: ast::Expr, otherwise: ast::Expr, location: Location) -> Expr {
         let condition = self.expr(condition).truthy(&mut self.error_handler);
         let mut then = self.expr(then).rval();
         let mut otherwise = self.expr(otherwise).rval();
@@ -819,13 +745,7 @@ impl PureAnalyzer {
     }
 
     // `a = b` or `a += b`
-    fn assignment_expr(
-        &mut self,
-        lval: Expr,
-        rval: Expr,
-        token: lex::AssignmentToken,
-        location: Location,
-    ) -> Expr {
+    fn assignment_expr(&mut self, lval: Expr, rval: Expr, token: lex::AssignmentToken, location: Location) -> Expr {
         if let Err(err) = lval.modifiable_lval() {
             self.err(err, location);
         }
@@ -868,10 +788,7 @@ impl PureAnalyzer {
         // there's no way to do this in C natively - the closest is `&var`, but that doesn't work on expressions
         // `T tmp = &*f()` or `T tmp = &sum`
         let init = Some(Initializer::Scalar(Box::new(lval)));
-        let decl = Declaration {
-            symbol: tmp_var,
-            init,
-        };
+        let decl = Declaration { symbol: tmp_var, init };
         self.decl_side_channel.push(Locatable::new(decl, location));
         self.scope.exit();
         // load `tmp`, i.e. `&*f()`, only evaluated once
@@ -952,9 +869,8 @@ pub(super) fn literal(literal: LiteralValue, location: Location) -> Expr {
 
 // 6.5.15 - Conditional operator
 fn pointer_promote(left: &mut Expr, right: &mut Expr) -> bool {
-    let is_convertible_to_any_pointer = |expr: &Expr| {
-        expr.ctype.is_void_pointer() || expr.ctype.is_char_pointer() || expr.is_null()
-    };
+    let is_convertible_to_any_pointer =
+        |expr: &Expr| expr.ctype.is_void_pointer() || expr.ctype.is_char_pointer() || expr.is_null();
     if left.ctype == right.ctype {
         true
     } else if is_convertible_to_any_pointer(left) && right.ctype.is_pointer() {
@@ -1066,17 +982,9 @@ impl Type {
         );
         // same sign
         if signs.0 == signs.1 {
-            return Ok(if left.rank() >= right.rank() {
-                left
-            } else {
-                right
-            });
+            return Ok(if left.rank() >= right.rank() { left } else { right });
         };
-        let (signed, unsigned) = if signs.0 {
-            (left, right)
-        } else {
-            (right, left)
-        };
+        let (signed, unsigned) = if signs.0 { (left, right) } else { (right, left) };
         if signed.can_represent(&unsigned) {
             Ok(signed)
         } else {
@@ -1235,10 +1143,7 @@ impl Expr {
                 ..self
             },
             // HACK: structs can't be dereferenced since they're not scalar, so we just fake it
-            Type::Struct(_) | Type::Union(_) if self.lval => Expr {
-                lval: false,
-                ..self
-            },
+            Type::Struct(_) | Type::Union(_) if self.lval => Expr { lval: false, ..self },
             _ if self.lval => Expr {
                 ctype: self.ctype.clone(),
                 lval: false,
@@ -1293,8 +1198,7 @@ impl Expr {
                 ctype: ctype.clone(),
             }
         // `NULL -> int*` or `void* -> int*` or `char* -> int*`
-        } else if ctype.is_pointer()
-            && (expr.is_null() || expr.ctype.is_void_pointer() || expr.ctype.is_char_pointer())
+        } else if ctype.is_pointer() && (expr.is_null() || expr.ctype.is_void_pointer() || expr.ctype.is_char_pointer())
         {
             expr.ctype = ctype.clone();
             expr
@@ -1351,12 +1255,7 @@ impl Expr {
             Type::Array(_, _) => err("array".to_string()),
             // member with const-qualified type
             Type::Struct(stype) | Type::Union(stype) => {
-                if stype
-                    .members()
-                    .iter()
-                    .map(|sym| sym.qualifiers.c_const)
-                    .any(|x| x)
-                {
+                if stype.members().iter().map(|sym| sym.qualifiers.c_const).any(|x| x) {
                     err("struct or union with `const` qualified member".to_string())
                 } else {
                     Ok(())
@@ -1416,17 +1315,11 @@ mod test {
 
         assert_eq!(
             parsed,
-            Ok(literal(
-                LiteralValue::Str("hi there\0".into()),
-                get_location(&parsed)
-            )),
+            Ok(literal(LiteralValue::Str("hi there\0".into()), get_location(&parsed))),
         );
         assert_literal(LiteralValue::Float(1.5));
         let parsed = expr("(1)");
-        assert_eq!(
-            parsed,
-            Ok(literal(LiteralValue::Int(1), get_location(&parsed)))
-        );
+        assert_eq!(parsed, Ok(literal(LiteralValue::Int(1), get_location(&parsed))));
         let x = Variable {
             ctype: Type::Int(true),
             id: InternedStr::get_or_intern("x"),

@@ -25,10 +25,16 @@ static ERRORS: AtomicUsize = AtomicUsize::new(0);
 static WARNINGS: AtomicUsize = AtomicUsize::new(0);
 
 const HELP: &str = concat!(
-    env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION"), "\n",
+    env!("CARGO_PKG_NAME"),
+    " ",
+    env!("CARGO_PKG_VERSION"),
+    "\n",
     "Joshua Nelson <jyn514@gmail.com>\n",
-    env!("CARGO_PKG_DESCRIPTION"), "\n",
-    "Homepage: ", env!("CARGO_PKG_REPOSITORY"), "\n",
+    env!("CARGO_PKG_DESCRIPTION"),
+    "\n",
+    "Homepage: ",
+    env!("CARGO_PKG_REPOSITORY"),
+    "\n",
     "\n",
     "usage: swcc [FLAGS] [OPTIONS] [<file>]
 
@@ -172,10 +178,7 @@ fn handle_warnings(warnings: VecDeque<CompileWarning>, file_db: &Files, color: C
         ANSIString::from(warn)
     };
     for warning in warnings {
-        print!(
-            "{}",
-            pretty_print(tag.clone(), warning.data, warning.location, file_db)
-        );
+        print!("{}", pretty_print(tag.clone(), warning.data, warning.location, file_db));
     }
 }
 
@@ -185,9 +188,7 @@ fn main() {
         Err(err) => {
             println!(
                 "{}: error parsing args: {}",
-                std::env::args()
-                    .next()
-                    .unwrap_or_else(|| env!("CARGO_PKG_NAME").into()),
+                std::env::args().next().unwrap_or_else(|| env!("CARGO_PKG_NAME").into()),
                 err
             );
             println!("{}", USAGE);
@@ -210,11 +211,7 @@ fn main() {
         File::open(opt.opt.filename.as_path())
             .and_then(|mut file| file.read_to_string(&mut buf))
             .unwrap_or_else(|err| {
-                eprintln!(
-                    "Failed to read {}: {}",
-                    opt.opt.filename.to_string_lossy(),
-                    err
-                );
+                eprintln!("Failed to read {}: {}", opt.opt.filename.to_string_lossy(), err);
                 process::exit(1);
             });
         opt.opt.filename
@@ -222,8 +219,7 @@ fn main() {
     let buf: ArcStr = buf.into();
     let max_errors = opt.opt.max_errors;
     let color_choice = opt.color;
-    real_main(buf, opt, &output)
-        .unwrap_or_else(|(err, files)| err_exit(err, max_errors, color_choice, &files));
+    real_main(buf, opt, &output).unwrap_or_else(|(err, files)| err_exit(err, max_errors, color_choice, &files));
 }
 
 fn str_to_path_buf(s: &str) -> Result<PathBuf, bool> {
@@ -276,13 +272,9 @@ fn parse_args() -> Result<(BinOpt, PathBuf), pico_args::Error> {
         .opt_value_from_fn(["-o", "--output"], str_to_path_buf)?
         .unwrap_or_else(|| "a.out".into());
     let max_errors = input
-        .opt_value_from_fn("--max-errors", |s| {
-            usize::from_str_radix(s, 10).map(NonZeroUsize::new)
-        })?
+        .opt_value_from_fn("--max-errors", |s| usize::from_str_radix(s, 10).map(NonZeroUsize::new))?
         .unwrap_or_else(|| Some(NonZeroUsize::new(10).unwrap()));
-    let color_choice = input
-        .opt_value_from_str("--color")?
-        .unwrap_or(ColorChoice::Auto);
+    let color_choice = input.opt_value_from_str("--color")?.unwrap_or(ColorChoice::Auto);
     let mut search_path = Vec::new();
     while let Some(include) = input.opt_value_from_fn(["-I", "--include"], str_to_path_buf)? {
         search_path.push(include);
@@ -293,15 +285,11 @@ fn parse_args() -> Result<(BinOpt, PathBuf), pico_args::Error> {
         use saltwater_parser::data::error::LexError;
 
         let mut iter = arg.splitn(2, '=');
-        let key = iter
-            .next()
-            .expect("apparently I don't understand pico_args");
+        let key = iter.next().expect("apparently I don't understand pico_args");
         let val = iter.next().unwrap_or("1");
         let def = val
             .try_into()
-            .map_err(|err: LexError| ArgumentParsingFailed {
-                cause: err.to_string(),
-            })?;
+            .map_err(|err: LexError| ArgumentParsingFailed { cause: err.to_string() })?;
         definitions.insert(key.into(), def);
     }
     let bin_opt = BinOpt {
@@ -333,10 +321,7 @@ fn err_exit(err: Error, max_errors: Option<NonZeroUsize>, color: ColorChoice, fi
             }
             if let Some(max) = max_errors {
                 if usize::from(max) <= errs.len() {
-                    println!(
-                        "fatal: too many errors (--max-errors {}), stopping now",
-                        max
-                    );
+                    println!("fatal: too many errors (--max-errors {}), stopping now", max);
                 }
             }
             let (num_warnings, num_errors) = (get_warnings(), get_errors());
@@ -375,12 +360,7 @@ fn error<T: std::fmt::Display>(msg: T, location: Location, file_db: &Files, colo
 }
 
 #[must_use]
-fn pretty_print<T: std::fmt::Display>(
-    prefix: ANSIString,
-    msg: T,
-    location: Location,
-    file_db: &Files,
-) -> String {
+fn pretty_print<T: std::fmt::Display>(prefix: ANSIString, msg: T, location: Location, file_db: &Files) -> String {
     let file = location.file;
     let start = file_db
         .location(file, location.span.start)
@@ -401,9 +381,7 @@ fn pretty_print<T: std::fmt::Display>(
         .location(file, location.span.end)
         .expect("end location should be in bounds");
     if start.line == end.line {
-        let line = file_db
-            .line_span(file, start.line)
-            .expect("line should be in bounds");
+        let line = file_db.line_span(file, start.line).expect("line should be in bounds");
         format!(
             "{}{}{}{}\n",
             buf,

@@ -177,10 +177,9 @@ impl PartialEq for LiteralToken {
     fn eq(&self, other: &Self) -> bool {
         use LiteralToken::*;
         match (self, other) {
-            (Int(x), Int(y))
-            | (UnsignedInt(x), UnsignedInt(y))
-            | (Float(x), Float(y))
-            | (Char(x), Char(y)) => x.as_str() == y.as_str(),
+            (Int(x), Int(y)) | (UnsignedInt(x), UnsignedInt(y)) | (Float(x), Float(y)) | (Char(x), Char(y)) => {
+                x.as_str() == y.as_str()
+            }
             (Str(x), Str(y)) => x.iter().zip(y).all(|(x, y)| x.as_str() == y.as_str()),
             _ => false,
         }
@@ -263,10 +262,7 @@ impl Location {
     }
 
     pub fn with<T>(self, data: T) -> Locatable<T> {
-        Locatable {
-            data,
-            location: self,
-        }
+        Locatable { data, location: self }
     }
 
     pub fn error<E: Into<super::error::Error>>(self, error: E) -> super::CompileError {
@@ -489,8 +485,8 @@ mod proptest_impl {
 pub(crate) mod test {
     use crate::*;
 
-    use self::saltwater_parser::PreProcessor;
     use self::saltwater_parser::lex::PreProcessorBuilder;
+    use self::saltwater_parser::PreProcessor;
 
     /// Create a new preprocessor with `s` as the input
     pub(crate) fn cpp(s: &str) -> PreProcessor {
@@ -504,9 +500,7 @@ pub(crate) mod test {
 
     #[test]
     fn assignment_display() {
-        let tokens = [
-            "=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", ">>=", "<<=", "^=",
-        ];
+        let tokens = ["=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", ">>=", "<<=", "^="];
         for token in &tokens {
             let mut lexer = cpp(token);
             let first = lexer.next().unwrap().unwrap().data;
