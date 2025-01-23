@@ -193,27 +193,21 @@ impl Type {
     }
     #[inline]
     pub(crate) fn is_bool(&self) -> bool {
-        match self {
-            Type::Bool => true,
-            _ => false,
-        }
+        matches!(self, Type::Bool)
     }
     #[inline]
     // returns whether `self` is a signed integer type
     pub fn is_signed(&self) -> bool {
         use Type::*;
-        match self {
-            Bool | Char(true) | Short(true) | Int(true) | Long(true) | Enum(_, _) => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            Bool | Char(true) | Short(true) | Int(true) | Long(true) | Enum(_, _)
+        )
     }
     #[inline]
     pub fn is_integral(&self) -> bool {
         use Type::*;
-        match self {
-            Bool | Char(_) | Short(_) | Int(_) | Long(_) | Enum(_, _) => true,
-            _ => false,
-        }
+        matches!(self, Bool | Char(_) | Short(_) | Int(_) | Long(_) | Enum(_, _))
     }
     #[inline]
     pub fn is_floating(&self) -> bool {

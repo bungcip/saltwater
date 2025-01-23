@@ -213,7 +213,7 @@ impl Lexer {
     }
     // should only be called at the end of a number. mostly error handling
     fn parse_exponent(&mut self, hex: bool) -> Result<(), LexError> {
-        let is_digit = |c: Option<char>| c.map_or(false, |c| c.is_ascii_digit() || c == '+' || c == '-');
+        let is_digit = |c: Option<char>| c.is_some_and(|c| c.is_ascii_digit() || c == '+' || c == '-');
         if hex {
             if self.match_next('p') || self.match_next('P') {
                 if !is_digit(self.peek()) {
@@ -808,9 +808,7 @@ pub(crate) trait LiteralParser {
         let mut whitespace = String::new();
         loop {
             // whitespace
-            while self
-                .peek()
-                .map_or(false, |c| c.is_ascii_whitespace() && !(stop_at_newline && c == '\n'))
+            while self.peek().is_some_and(|c| c.is_ascii_whitespace() && !(stop_at_newline && c == '\n'))
             {
                 if let Some(c) = self.next_char() {
                     whitespace.push(c);

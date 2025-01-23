@@ -501,10 +501,8 @@ impl Macro<'_> {
 
                             _ => return None,
                         };
-                        match (scope, attr) {
-                            // FIXME(eddyb) provide a way to customize the set of C++ attributes.
-                            (_scope, _attr) => true,
-                        }
+                        let (_scope, _attr) = (scope, attr);
+                        true
                     }
 
                     SpecialCondMacro::HasFeature => match args[0] {
@@ -932,35 +930,35 @@ impl<'a> Expander<'a> {
         output_tokens
     }
 
-    pub fn scan_for_includes(&self) -> Vec<String> {
-        self.scan_group_for_includes(&self.enclosing_src_file.phase3_group)
-    }
+    // pub fn scan_for_includes(&self) -> Vec<String> {
+    //     self.scan_group_for_includes(&self.enclosing_src_file.phase3_group)
+    // }
 
-    fn scan_group_for_includes(&self, group: &Group) -> Vec<String> {
-        let mut includes = vec![];
+    // fn scan_group_for_includes(&self, group: &Group) -> Vec<String> {
+    //     let mut includes = vec![];
 
-        for part in &group.parts {
-            match part {
-                GroupPart::Verbatim(_) => {}
-                GroupPart::Directive { maybe_name, tokens } => {
-                    if let Some(name) = maybe_name {
-                        if name == "include" || name == "include_next" {
-                            let mut tokens = tokens.iter();
-                            if let Some((_, header_name)) = parse_header_name(&mut tokens) {
-                                if tokens.next().is_none() {
-                                    includes.push(header_name);
-                                }
-                            }
-                        }
-                    }
-                }
-                GroupPart::IfElse { cond: _, then, else_ } => {
-                    includes.extend(self.scan_group_for_includes(then));
-                    includes.extend(self.scan_group_for_includes(else_));
-                }
-            }
-        }
+    //     for part in &group.parts {
+    //         match part {
+    //             GroupPart::Verbatim(_) => {}
+    //             GroupPart::Directive { maybe_name, tokens } => {
+    //                 if let Some(name) = maybe_name {
+    //                     if name == "include" || name == "include_next" {
+    //                         let mut tokens = tokens.iter();
+    //                         if let Some((_, header_name)) = parse_header_name(&mut tokens) {
+    //                             if tokens.next().is_none() {
+    //                                 includes.push(header_name);
+    //                             }
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //             GroupPart::IfElse { cond: _, then, else_ } => {
+    //                 includes.extend(self.scan_group_for_includes(then));
+    //                 includes.extend(self.scan_group_for_includes(else_));
+    //             }
+    //         }
+    //     }
 
-        includes
-    }
+    //     includes
+    // }
 }

@@ -21,7 +21,7 @@ impl Iterator for Tokenizer<'_> {
         let mut eat_whitespace = || {
             self.phase2
                 .try_eat(|phase2| {
-                    Some(match phase2.next()? {
+                    match phase2.next()? {
                         ' ' | '\t' => {}
 
                         '/' if phase2.eat('/') => while phase2.eat_if(|&c| c != '\n').is_some() {},
@@ -33,7 +33,8 @@ impl Iterator for Tokenizer<'_> {
                             }
                         }
                         _ => return None,
-                    })
+                    };
+                    Some(())
                 })
                 .is_some()
         };
@@ -255,7 +256,7 @@ impl Tokenizer<'_> {
 
             let mut tokens = vec![];
 
-            while let Some(tok) = self.next() {
+            for tok in self.by_ref(){
                 if let Token::Newline = tok {
                     break;
                 }

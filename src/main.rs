@@ -303,7 +303,7 @@ fn parse_args() -> Result<(BinOpt, PathBuf), pico_args::Error> {
         .opt_value_from_fn(["-o", "--output"], str_to_path_buf)?
         .unwrap_or_else(|| "a.out".into());
     let max_errors = input
-        .opt_value_from_fn("--max-errors", |s| usize::from_str_radix(s, 10).map(NonZeroUsize::new))?
+        .opt_value_from_fn("--max-errors", |s| s.parse::<usize>().map(NonZeroUsize::new))?
         .unwrap_or_else(|| Some(NonZeroUsize::new(10).unwrap()));
     let color_choice = input.opt_value_from_str("--color")?.unwrap_or(ColorChoice::Auto);
     let mut search_path = Vec::new();
@@ -450,9 +450,9 @@ mod backtrace {
     use color_backtrace::termcolor::{self, StandardStream};
     use color_backtrace::BacktracePrinter;
 
-    impl Into<termcolor::ColorChoice> for ColorChoice {
-        fn into(self) -> termcolor::ColorChoice {
-            match self {
+    impl From<ColorChoice> for termcolor::ColorChoice {
+        fn from(val: ColorChoice) -> Self {
+            match val {
                 ColorChoice::Always => termcolor::ColorChoice::Always,
                 ColorChoice::Auto => termcolor::ColorChoice::Auto,
                 ColorChoice::Never => termcolor::ColorChoice::Never,

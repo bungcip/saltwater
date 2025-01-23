@@ -886,17 +886,9 @@ impl PureAnalyzer {
                     params.push(meta);
                 }
                 // int f(void);
-                let is_void = match params.as_slice() {
-                    [Variable { ctype: Type::Void, .. }] => true,
-                    _ => false,
-                };
+                let is_void = matches!(params.as_slice(), [Variable { ctype: Type::Void, .. }]);
                 // int f(void, int) or int f(int, void) or ...
-                if !is_void
-                    && params.iter().any(|param| match param.ctype {
-                        Type::Void => true,
-                        _ => false,
-                    })
-                {
+                if !is_void && params.iter().any(|param| matches!(param.ctype, Type::Void)) {
                     self.err(SemanticError::InvalidVoidParameter, location);
                 // int f(void, ...)
                 } else if func.varargs && is_void {
@@ -1054,10 +1046,7 @@ impl types::FunctionType {
 impl Type {
     #[inline]
     fn is_char(&self) -> bool {
-        match self {
-            Type::Char(true) => true,
-            _ => false,
-        }
+        matches!(self, Type::Char(true))
     }
 }
 
@@ -1225,20 +1214,14 @@ fn count_specifiers(
 impl UnitSpecifier {
     fn is_qualifier(self) -> bool {
         use UnitSpecifier::*;
-        match self {
-            Const | Volatile | Restrict | Inline | NoReturn => true,
-            _ => false,
-        }
+        matches!(self, Const | Volatile | Restrict | Inline | NoReturn)
     }
     /// Returns whether this is a self-contained type, not just whether this modifies a type.
     /// For example, `int` and `long` are self-contained types, but `unsigned` and `_Complex` are not.
     /// This is despite the fact that `unsigned i;` is valid and means `unsigned int i;`
     fn is_type(self) -> bool {
         use UnitSpecifier::*;
-        match self {
-            Bool | Char | Int | Long | Float | Double | VaList => true,
-            _ => false,
-        }
+        matches!(self, Bool | Char | Int | Long | Float | Double | VaList)
     }
 }
 

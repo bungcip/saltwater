@@ -895,10 +895,7 @@ impl Type {
     #[inline]
     fn is_char_pointer(&self) -> bool {
         match self {
-            Type::Pointer(t, _) => match **t {
-                Type::Char(_) => true,
-                _ => false,
-            },
+            Type::Pointer(t, _) => matches!(**t, Type::Char(_)),
             _ => false,
         }
     }
@@ -1006,10 +1003,7 @@ impl Type {
         }
     }
     fn is_struct(&self) -> bool {
-        match self {
-            Type::Struct(_) | Type::Union(_) => true,
-            _ => false,
-        }
+        matches!(self, Type::Struct(_) | Type::Union(_))
     }
     fn is_complete(&self) -> bool {
         match self {
@@ -1033,10 +1027,10 @@ impl Expr {
     fn is_null(&self) -> bool {
         // TODO: I think we need to const fold this to allow `(void*)0`
         if let ExprType::Literal(token) = &self.expr {
-            match token {
-                LiteralValue::Int(0) | LiteralValue::UnsignedInt(0) | LiteralValue::Char(0) => true,
-                _ => false,
-            }
+            matches!(
+                token,
+                LiteralValue::Int(0) | LiteralValue::UnsignedInt(0) | LiteralValue::Char(0)
+            )
         } else {
             false
         }
@@ -1255,7 +1249,7 @@ impl Expr {
             Type::Array(_, _) => err("array".to_string()),
             // member with const-qualified type
             Type::Struct(stype) | Type::Union(stype) => {
-                if stype.members().iter().map(|sym| sym.qualifiers.c_const).any(|x| x) {
+                if stype.members().iter().any(|sym| sym.qualifiers.c_const) {
                     err("struct or union with `const` qualified member".to_string())
                 } else {
                     Ok(())
