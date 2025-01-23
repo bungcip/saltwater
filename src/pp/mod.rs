@@ -4,19 +4,18 @@
 /// phase 2 - Line Joiner
 /// phase 3 - Tokenizer
 /// phase 4 - Expander
-
 mod eat;
-mod line_joiner;
-mod token;
-mod tokenizer;
 mod expander;
 mod headers;
+mod line_joiner;
 mod sources;
+mod token;
+mod tokenizer;
 
 pub use eat::Eat;
-pub use line_joiner::LineJoiner;
-pub use token::{Token, Ident};
-pub use tokenizer::Tokenizer;
 pub use expander::Expander;
-pub use headers::{Headers};
+pub use headers::Headers;
+pub use line_joiner::LineJoiner;
 pub use sources::SourceFile;
+pub use token::{Ident, Token};
+pub use tokenizer::Tokenizer;

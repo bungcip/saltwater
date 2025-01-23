@@ -42,9 +42,7 @@ impl Headers {
             }
         }
 
-        let start_idx = start_after
-            .and_then(|h| Some(h.search_path_idx? + 1))
-            .unwrap_or(0);
+        let start_idx = start_after.and_then(|h| Some(h.search_path_idx? + 1)).unwrap_or(0);
         for (i, search_path) in self.search_paths.iter().enumerate().skip(start_idx) {
             let path = search_path.join(name);
             if path.is_file() {
@@ -72,8 +70,7 @@ impl Headers {
         name: impl AsRef<Path>,
         start_after: Option<&Header>,
     ) -> Option<&Header> {
-        let (search_path_idx, path) =
-            self.search(style, enclosing_src_file, name.as_ref(), start_after)?;
+        let (search_path_idx, path) = self.search(style, enclosing_src_file, name.as_ref(), start_after)?;
         Some(match self.headers.get(&path) {
             Some(header) => header,
             None => {
@@ -87,13 +84,7 @@ impl Headers {
                         )
                     })
                     .ok()?;
-                self.headers.insert(
-                    path,
-                    Box::new(Header {
-                        src,
-                        search_path_idx,
-                    }),
-                )
+                self.headers.insert(path, Box::new(Header { src, search_path_idx }))
             }
         })
     }

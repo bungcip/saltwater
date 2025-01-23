@@ -1,6 +1,6 @@
 use crate::pp::headers::{Header, Headers, IncludeStyle};
-use crate::pp::tokenizer::{Group, GroupPart, Tokenizer};
 use crate::pp::sources::SourceFile;
+use crate::pp::tokenizer::{Group, GroupPart, Tokenizer};
 use crate::pp::{Eat, Ident, Token};
 use indexmap::IndexSet;
 use std::collections::HashMap;
@@ -131,12 +131,9 @@ impl<'a> Macro<'a> {
         loop {
             // HACK(eddyb) keep the verbatim tokens up to date for everything below.
             {
-                let verbatim_tokens =
-                    &verbatim_start_tokens[..verbatim_start_tokens.len() - tokens.as_slice().len()];
+                let verbatim_tokens = &verbatim_start_tokens[..verbatim_start_tokens.len() - tokens.as_slice().len()];
                 if !verbatim_tokens.is_empty() {
-                    if let Some(Replacement::Verbatim(old_verbatim_tokens)) =
-                        replacements.last_mut()
-                    {
+                    if let Some(Replacement::Verbatim(old_verbatim_tokens)) = replacements.last_mut() {
                         *old_verbatim_tokens = verbatim_tokens;
                     } else {
                         replacements.push(Replacement::Verbatim(verbatim_tokens));
@@ -226,42 +223,39 @@ pub struct Expander<'a> {
 
 impl<'a> Expander<'a> {
     pub fn new(src: &'a SourceFile, headers: &'a Headers) -> Self {
-        let defines = [
-            ("__FILE__", BuiltinMacro::File),
-            ("__LINE__", BuiltinMacro::Line),
-        ]
-        .iter()
-        .map(|&(name, builtin)| {
-            (
-                name,
-                Macro {
-                    params: None,
-                    body: MacroBody::Builtin(builtin),
-                },
-            )
-        })
-        .chain(
-            [
-                ("__has_attribute", SpecialCondMacro::HasAttribute),
-                ("__has_builtin", SpecialCondMacro::HasBuiltin),
-                ("__has_cpp_attribute", SpecialCondMacro::HasCppAttribute),
-                ("__has_feature", SpecialCondMacro::HasFeature),
-                ("__has_include", SpecialCondMacro::HasInclude),
-                ("__has_include_next", SpecialCondMacro::HasIncludeNext),
-                ("__is_identifier", SpecialCondMacro::IsIdentifier),
-            ]
+        let defines = [("__FILE__", BuiltinMacro::File), ("__LINE__", BuiltinMacro::Line)]
             .iter()
-            .map(|&(name, special)| {
+            .map(|&(name, builtin)| {
                 (
                     name,
                     Macro {
-                        params: Some((1, false)),
-                        body: MacroBody::CondOnly(special),
+                        params: None,
+                        body: MacroBody::Builtin(builtin),
                     },
                 )
-            }),
-        )
-        .collect();
+            })
+            .chain(
+                [
+                    ("__has_attribute", SpecialCondMacro::HasAttribute),
+                    ("__has_builtin", SpecialCondMacro::HasBuiltin),
+                    ("__has_cpp_attribute", SpecialCondMacro::HasCppAttribute),
+                    ("__has_feature", SpecialCondMacro::HasFeature),
+                    ("__has_include", SpecialCondMacro::HasInclude),
+                    ("__has_include_next", SpecialCondMacro::HasIncludeNext),
+                    ("__is_identifier", SpecialCondMacro::IsIdentifier),
+                ]
+                .iter()
+                .map(|&(name, special)| {
+                    (
+                        name,
+                        Macro {
+                            params: Some((1, false)),
+                            body: MacroBody::CondOnly(special),
+                        },
+                    )
+                }),
+            )
+            .collect();
 
         Expander {
             enclosing_src_file: src,
@@ -313,11 +307,9 @@ impl OuterExpansion<'_> {
     fn outermost_physical_line(self) -> Option<usize> {
         match self {
             OuterExpansion::File | OuterExpansion::Cond => None,
-            OuterExpansion::Macro { name, outer } => Some(
-                outer
-                    .outermost_physical_line()
-                    .unwrap_or(name.physical_line),
-            ),
+            OuterExpansion::Macro { name, outer } => {
+                Some(outer.outermost_physical_line().unwrap_or(name.physical_line))
+            }
         }
     }
 }
@@ -388,9 +380,7 @@ impl Macro<'_> {
                 // The extra token not included in the argument is `,` or `)`.
                 let non_arg_tokens = tokens.as_slice().len() + 1;
                 let mut arg_tokens = &arg_start_tokens[..arg_start_tokens.len() - non_arg_tokens];
-                while let Some((Token::Whitespace, rest)) | Some((Token::Newline, rest)) =
-                    arg_tokens.split_last()
-                {
+                while let Some((Token::Whitespace, rest)) | Some((Token::Newline, rest)) = arg_tokens.split_last() {
                     arg_tokens = rest;
                 }
                 args.push(arg_tokens);
@@ -457,9 +447,7 @@ impl Macro<'_> {
                 }
 
                 BuiltinMacro::Line => {
-                    let physical_line = outer
-                        .outermost_physical_line()
-                        .unwrap_or(name.physical_line);
+                    let physical_line = outer.outermost_physical_line().unwrap_or(name.physical_line);
                     return Some(vec![Token::Literal(physical_line.to_string())]);
                 }
             },
@@ -482,12 +470,9 @@ impl Macro<'_> {
                         } else {
                             None
                         };
-                        phase4.headers.has_include(
-                            style,
-                            phase4.enclosing_src_file,
-                            &header_name,
-                            start_after,
-                        )
+                        phase4
+                            .headers
+                            .has_include(style, phase4.enclosing_src_file, &header_name, start_after)
                     }
 
                     SpecialCondMacro::HasAttribute => match args[0] {
@@ -570,8 +555,7 @@ impl Macro<'_> {
                             }
                         }
                         // HACK(eddyb) remove adjacent whitespace created by newline flattening.
-                        expanded_arg
-                            .dedup_by(|a, b| matches!((a, b), (Token::Whitespace, Token::Whitespace)));
+                        expanded_arg.dedup_by(|a, b| matches!((a, b), (Token::Whitespace, Token::Whitespace)));
 
                         substituted_tokens.extend(expanded_arg);
                     }
@@ -581,21 +565,17 @@ impl Macro<'_> {
                     Replacement::Concat(parts) => {
                         let mut tok = parts.first().and_then(|&first| match first {
                             ConcatPart::Token(tok) => Some(tok.clone()),
-                            ConcatPart::Param(ParamMode::Normal, i) => {
-                                args[i].split_last().map(|(tok, rest)| {
-                                    substituted_tokens.extend_from_slice(rest);
-                                    tok.clone()
-                                })
-                            }
+                            ConcatPart::Param(ParamMode::Normal, i) => args[i].split_last().map(|(tok, rest)| {
+                                substituted_tokens.extend_from_slice(rest);
+                                tok.clone()
+                            }),
                             ConcatPart::Param(ParamMode::Stringify, i) => Some(stringify_arg(i)),
                         });
                         for &part in parts.iter().skip(1) {
                             let rhs = match part {
                                 ConcatPart::Token(tok) => Some(tok.clone()),
                                 ConcatPart::Param(ParamMode::Normal, i) => args[i].first().cloned(),
-                                ConcatPart::Param(ParamMode::Stringify, i) => {
-                                    Some(stringify_arg(i))
-                                }
+                                ConcatPart::Param(ParamMode::Stringify, i) => Some(stringify_arg(i)),
                             };
                             tok = match (tok, rhs) {
                                 (None, None) => None,
@@ -748,8 +728,7 @@ impl<'a> CondEval<'a> {
             // NOTE(eddyb) a prefix of `0` means a base other than 10.
             if !lit.starts_with(|c| matches!(c, '1'..='9')) {
                 // HACK(eddyb) still need to support `0` itself
-                let is_zero =
-                    lit.starts_with("0") && !lit[1..].starts_with(|c| matches!(c, '0'..='9'));
+                let is_zero = lit.starts_with("0") && !lit[1..].starts_with(|c| matches!(c, '0'..='9'));
                 if !is_zero {
                     return Err(());
                 }
@@ -791,11 +770,9 @@ impl<'a> CondEval<'a> {
     fn shift(&mut self) -> Result<i128, ()> {
         let v = self.additive()?;
         Ok(if self.eat_op2('<', '<') {
-            v.checked_shl(self.additive()?.try_into().map_err(|_| {})?)
-                .ok_or(())?
+            v.checked_shl(self.additive()?.try_into().map_err(|_| {})?).ok_or(())?
         } else if self.eat_op2('>', '>') {
-            v.checked_shr(self.additive()?.try_into().map_err(|_| {})?)
-                .ok_or(())?
+            v.checked_shr(self.additive()?.try_into().map_err(|_| {})?).ok_or(())?
         } else {
             v
         })
@@ -871,9 +848,7 @@ impl<'a> Expander<'a> {
                 GroupPart::Directive { maybe_name, tokens } => {
                     let name = maybe_name.as_ref().map_or("", |name| &name[..]);
 
-                    if name == "include"
-                        || name == "include_next" && self.enclosing_header.is_some()
-                    {
+                    if name == "include" || name == "include_next" && self.enclosing_header.is_some() {
                         let mut tokens = tokens.iter();
                         if let Some((style, header_name)) = parse_header_name(&mut tokens) {
                             if tokens.next().is_none() {
@@ -882,12 +857,10 @@ impl<'a> Expander<'a> {
                                 } else {
                                     None
                                 };
-                                if let Some(header) = self.headers.include(
-                                    style,
-                                    self.enclosing_src_file,
-                                    &header_name,
-                                    start_after,
-                                ) {
+                                if let Some(header) =
+                                    self.headers
+                                        .include(style, self.enclosing_src_file, &header_name, start_after)
+                                {
                                     let mut header_phase4 = Expander {
                                         enclosing_src_file: &header.src,
                                         enclosing_header: Some(header),
@@ -919,9 +892,7 @@ impl<'a> Expander<'a> {
 
                     // HACK(eddyb) hide some (noop?) pragmas.
                     if name == "pragma" {
-                        if let [Token::Ident(ns), Token::Whitespace, Token::Ident(pragma), rest @ ..] =
-                            &tokens[..]
-                        {
+                        if let [Token::Ident(ns), Token::Whitespace, Token::Ident(pragma), rest @ ..] = &tokens[..] {
                             if ns == "GCC" {
                                 if pragma == "system_header" && rest.is_empty() {
                                     continue;
@@ -929,9 +900,7 @@ impl<'a> Expander<'a> {
                                 if pragma == "diagnostic" {
                                     if let [Token::Whitespace, Token::Ident(action), rest @ ..] = rest {
                                         if action == "ignored" {
-                                            if let [Token::Whitespace, Token::Literal(diagnostics)] =
-                                                rest
-                                            {
+                                            if let [Token::Whitespace, Token::Literal(diagnostics)] = rest {
                                                 if diagnostics == "\"-Wliteral-suffix\"" {
                                                     continue;
                                                 }
@@ -956,9 +925,7 @@ impl<'a> Expander<'a> {
                 }
                 GroupPart::IfElse { cond, then, else_ } => {
                     let cond = self.expand_macros(cond, &OuterExpansion::Cond);
-                    let cond_eval = CondEval {
-                        tokens: cond.iter(),
-                    };
+                    let cond_eval = CondEval { tokens: cond.iter() };
                     let group = if cond_eval.eval() { then } else { else_ };
                     output_tokens.extend(self.expand_group(group));
                 }
@@ -989,11 +956,7 @@ impl<'a> Expander<'a> {
                         }
                     }
                 }
-                GroupPart::IfElse {
-                    cond: _,
-                    then,
-                    else_,
-                } => {
+                GroupPart::IfElse { cond: _, then, else_ } => {
                     includes.extend(self.scan_group_for_includes(then));
                     includes.extend(self.scan_group_for_includes(else_));
                 }

@@ -1,4 +1,7 @@
-use std::{convert::{TryFrom, TryInto}, str::FromStr};
+use std::{
+    convert::{TryFrom, TryInto},
+    str::FromStr,
+};
 
 use codespan::FileId;
 
@@ -271,9 +274,8 @@ impl Lexer {
         let raw_str = self.parse_string_raw(false);
         raw_str.map(|_| LiteralToken::Str(vec![self.slice(start)]).into())
 
-
         // let mut raw_str = self.parse_string_raw(false)?;
-        
+
         // // insert quote
         // raw_str.insert(0, b'"');
         // raw_str.push(b'"');

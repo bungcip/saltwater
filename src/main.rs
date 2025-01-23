@@ -1,7 +1,7 @@
 mod codegen;
-mod saltwater_parser;
-mod pp;
 mod driver;
+mod pp;
+mod saltwater_parser;
 
 use std::collections::VecDeque;
 use std::fmt::Write;
@@ -126,15 +126,12 @@ macro_rules! sw_try {
     };
 }
 
-
 /// preprocess a file with new version of preprocessor
 fn preprocess_v2(buf: &str, opt: Opt) -> Program<VecDeque<Locatable<Token>>> {
-
     // NOTE: for now, we just dump it to &str and use original saltwater preprocessor
     // then we must remove all broken code in processor to new code
     let mut temp_buffer = driver::preprocess_v1(buf, opt.filename.clone());
     let buf = temp_buffer.as_str();
-
 
     let path = opt.search_path.iter().map(|p| p.into());
     let mut cpp = PreProcessor::new(buf, opt.filename, opt.debug_lex, path, opt.definitions);

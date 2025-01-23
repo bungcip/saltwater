@@ -216,7 +216,6 @@ pub(crate) fn check_semantics(buf: &str, opt: Opt) -> Program<Vec<Locatable<hir:
     let temp_buffer = driver::preprocess_v1(buf, opt.filename.clone());
     let buf = temp_buffer.as_str();
 
-
     let path = opt.search_path.iter().map(|p| p.into());
     let mut cpp = PreProcessor::new(buf, opt.filename, opt.debug_lex, path, opt.definitions);
 
