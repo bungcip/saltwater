@@ -68,6 +68,8 @@ pub(crate) use data::*;
 pub use lex::{Definition, PreProcessor, PreProcessorBuilder};
 use parse::Parser;
 
+use crate::driver;
+
 #[macro_use]
 mod macros;
 mod analyze;
@@ -211,6 +213,10 @@ pub fn preprocess(buf: &str, opt: Opt) -> Program<VecDeque<Locatable<Token>>> {
 
 /// Perform semantic analysis, including type checking and constant folding.
 pub(crate) fn check_semantics(buf: &str, opt: Opt) -> Program<Vec<Locatable<hir::Declaration>>> {
+    let temp_buffer = driver::preprocess_v1(buf, opt.filename.clone());
+    let buf = temp_buffer.as_str();
+
+
     let path = opt.search_path.iter().map(|p| p.into());
     let mut cpp = PreProcessor::new(buf, opt.filename, opt.debug_lex, path, opt.definitions);
 

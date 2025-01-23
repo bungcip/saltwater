@@ -1,7 +1,10 @@
 mod codegen;
 mod saltwater_parser;
+mod pp;
+mod driver;
 
 use std::collections::VecDeque;
+use std::fmt::Write;
 use std::fs::File;
 use std::io::{self, Read};
 use std::num::NonZeroUsize;
@@ -14,7 +17,7 @@ use ansi_term::{ANSIString, Colour};
 use arcstr::ArcStr;
 use codegen::{assemble, compile, link};
 use pico_args::Arguments;
-use saltwater_parser::{CompileWarning, Files, Opt};
+use saltwater_parser::{CompileWarning, Files, Locatable, Opt, PreProcessor, Token};
 // use saltwater_parser::data::{error::CompileWarning, Location};
 // use saltwater_parser::{preprocess, Error, Files, Opt, Program};
 use tempfile::NamedTempFile;
@@ -123,17 +126,51 @@ macro_rules! sw_try {
     };
 }
 
+
+/// preprocess a file with new version of preprocessor
+fn preprocess_v2(buf: &str, opt: Opt) -> Program<VecDeque<Locatable<Token>>> {
+
+    // NOTE: for now, we just dump it to &str and use original saltwater preprocessor
+    // then we must remove all broken code in processor to new code
+    let mut temp_buffer = driver::preprocess_v1(buf, opt.filename.clone());
+    let buf = temp_buffer.as_str();
+
+
+    let path = opt.search_path.iter().map(|p| p.into());
+    let mut cpp = PreProcessor::new(buf, opt.filename, opt.debug_lex, path, opt.definitions);
+
+    let mut tokens = VecDeque::new();
+    let mut errs = VecDeque::new();
+    for result in &mut cpp {
+        match result {
+            Ok(token) => tokens.push_back(token),
+            Err(err) => errs.push_back(err),
+        }
+    }
+    let result = if errs.is_empty() { Ok(tokens) } else { Err(errs) };
+    Program {
+        result,
+        warnings: cpp.warnings(),
+        files: cpp.into_files(),
+    }
+}
+
 // TODO: when std::process::termination is stable, make err_exit an impl for CompileError
 // TODO: then we can move this into `main` and have main return `Result<(), Error>`
 fn real_main(buf: ArcStr, bin_opt: BinOpt, output: &Path) -> Result<(), (Error, Files)> {
     let opt = if bin_opt.preprocess_only {
         use std::io::{BufWriter, Write};
 
+        // let Program {
+        //     result: tokens,
+        //     warnings,
+        //     files,
+        // } = preprocess(&buf, bin_opt.opt);
         let Program {
             result: tokens,
             warnings,
             files,
-        } = preprocess(&buf, bin_opt.opt);
+        } = preprocess_v2(&buf, bin_opt.opt);
         handle_warnings(warnings, &files, bin_opt.color);
 
         let stdout = io::stdout();

@@ -40,6 +40,8 @@ codespan = { version = "0.11", default-features = false }
 counter = "0.6"
 shared_str = "0.1.1"
 time = {version="0.3", features = ["local-offset", "macros", "formatting", "std"]}
+indexmap = "2.7.1"
+elsa = "1.10.0"
 
 [dev-dependencies]
 env_logger = { version = "0.11", default-features = false }

@@ -1,4 +1,4 @@
-use std::convert::{TryFrom, TryInto};
+use std::{convert::{TryFrom, TryInto}, str::FromStr};
 
 use codespan::FileId;
 
@@ -270,6 +270,17 @@ impl Lexer {
         let start = self.get_location().offset - '"'.len_utf8() as u32;
         let raw_str = self.parse_string_raw(false);
         raw_str.map(|_| LiteralToken::Str(vec![self.slice(start)]).into())
+
+
+        // let mut raw_str = self.parse_string_raw(false)?;
+        
+        // // insert quote
+        // raw_str.insert(0, b'"');
+        // raw_str.push(b'"');
+
+        // let raw_str = std::str::from_utf8(&raw_str).unwrap();
+        // let raw_str = dbg!(Substr::from_str(raw_str).unwrap());
+        // Ok(LiteralToken::Str(vec![raw_str]).into())
     }
     /// Parse an identifier or keyword, given the starting letter.
     ///
@@ -567,6 +578,7 @@ impl<'a> PseudoLexer<std::str::Chars<'a>> {
 
 pub(crate) trait LiteralParser {
     fn next_char(&mut self) -> Option<char>;
+
     fn peek(&mut self) -> Option<char>;
     fn peek_next(&mut self) -> Option<char>;
     fn get_location(&self) -> &SingleLocation;
@@ -606,61 +618,61 @@ pub(crate) trait LiteralParser {
     /// After:  chars{"'"}
     fn parse_single_char(&mut self, string: bool) -> Result<u8, CharError> {
         let terminator = if string { '"' } else { '\'' };
-        if let Some(c) = self.next_char() {
-            if c == '\\' {
-                if let Some(c) = self.next_char() {
-                    Ok(match c {
-                        // escaped newline: "a\
-                        // b"
-                        '\n' => unreachable!("should be handled earlier"),
-                        'n' => b'\n',   // embedded newline: "a\nb"
-                        'r' => b'\r',   // carriage return
-                        't' => b'\t',   // tab
-                        '"' => b'"',    // escaped "
-                        '\'' => b'\'',  // escaped '
-                        '\\' => b'\\',  // \
-                        'a' => b'\x07', // bell
-                        'b' => b'\x08', // backspace
-                        'v' => b'\x0b', // vertical tab
-                        'f' => b'\x0c', // form feed
-                        '?' => b'?',    // a literal '?', for trigraphs
-                        '0'..='9' => {
-                            return self.parse_octal_char_escape(c).map_err(|err| {
-                                // try to avoid extraneous errors, but don't try too hard
-                                self.match_next('\'');
-                                err
-                            });
-                        }
-                        'x' => {
-                            return self.parse_hex_char_escape().map_err(|err| {
-                                // try to avoid extraneous errors, but don't try too hard
-                                self.match_next('\'');
-                                err
-                            });
-                        }
-                        '\0'..='\x7f' => {
-                            self.warn_loc(
-                                &format!("unknown character escape '\\{}'", c),
-                                self.span(self.get_location().offset - 1),
-                            );
-                            c as u8
-                        }
-                        _ => return Err(CharError::MultiByte),
-                    })
-                } else {
-                    Err(CharError::Eof)
-                }
-            } else if c == '\n' {
-                Err(CharError::Newline)
-            } else if c == terminator {
-                Err(CharError::Terminator)
-            } else if c.is_ascii() {
-                Ok(c as u8)
+        let Some(c) = self.next_char() else {
+            return Err(CharError::Eof);
+        };
+
+        if c == '\\' {
+            if let Some(c) = self.next_char() {
+                Ok(match c {
+                    // escaped newline: "a\
+                    // b"
+                    '\n' => unreachable!("should be handled earlier"),
+                    'n' => b'\n',   // embedded newline: "a\nb"
+                    'r' => b'\r',   // carriage return
+                    't' => b'\t',   // tab
+                    '"' => b'"',    // escaped "
+                    '\'' => b'\'',  // escaped '
+                    '\\' => b'\\',  // \
+                    'a' => b'\x07', // bell
+                    'b' => b'\x08', // backspace
+                    'v' => b'\x0b', // vertical tab
+                    'f' => b'\x0c', // form feed
+                    '?' => b'?',    // a literal '?', for trigraphs
+                    '0'..='9' => {
+                        return self.parse_octal_char_escape(c).map_err(|err| {
+                            // try to avoid extraneous errors, but don't try too hard
+                            self.match_next('\'');
+                            err
+                        });
+                    }
+                    'x' => {
+                        return self.parse_hex_char_escape().map_err(|err| {
+                            // try to avoid extraneous errors, but don't try too hard
+                            self.match_next('\'');
+                            err
+                        });
+                    }
+                    '\0'..='\x7f' => {
+                        self.warn_loc(
+                            &format!("unknown character escape '\\{}'", c),
+                            self.span(self.get_location().offset - 1),
+                        );
+                        c as u8
+                    }
+                    _ => return Err(CharError::MultiByte),
+                })
             } else {
-                Err(CharError::MultiByte)
+                Err(CharError::Eof)
             }
+        } else if c == '\n' {
+            Err(CharError::Newline)
+        } else if c == terminator {
+            Err(CharError::Terminator)
+        } else if c.is_ascii() {
+            Ok(c as u8)
         } else {
-            Err(CharError::Eof)
+            Err(CharError::MultiByte)
         }
     }
     fn parse_octal_char_escape(&mut self, start: char) -> Result<u8, CharError> {
