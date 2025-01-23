@@ -38,8 +38,7 @@ pub(crate) struct Analyzer<T: Lexer> {
 ///
 /// In particular, it performs type checking and semantic analysis.
 /// Use this if you need to analyze a specific AST data type without parsing a whole program.
-
-// The struct is used mostly for holding scopes and error handler.
+/// The struct is used mostly for holding scopes and error handler.
 pub(crate) struct PureAnalyzer {
     // in case a `Declaration` has multiple declarators
     pending: VecDeque<Locatable<Declaration>>,

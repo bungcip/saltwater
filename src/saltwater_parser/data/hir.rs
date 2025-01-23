@@ -51,9 +51,9 @@ pub struct Declaration {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Initializer {
-    Scalar(Box<Expr>),                 // int i = 5;
-    InitializerList(Vec<Initializer>), // int a[] = { 1, 2, 3 };
-    FunctionBody(Vec<Stmt>),           // int f() { return 0; }
+    Scalar(Box<Expr>),       // int i = 5;
+    List(Vec<Initializer>),  // int a[] = { 1, 2, 3 };
+    FunctionBody(Vec<Stmt>), // int f() { return 0; }
 }
 
 /// Holds the metadata for an expression.
@@ -328,12 +328,6 @@ impl TryFrom<Keyword> for StorageClass {
     }
 }
 
-impl Default for StorageClass {
-    fn default() -> StorageClass {
-        StorageClass::Auto
-    }
-}
-
 impl Display for StorageClass {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{}", &format!("{:?}", self).to_lowercase())
@@ -394,7 +388,7 @@ impl Display for Initializer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Initializer::Scalar(expr) => write!(f, "{}", expr),
-            Initializer::InitializerList(list) => {
+            Initializer::List(list) => {
                 write!(f, "{{ ")?;
                 write!(f, "{}", joined(list, ", "),)?;
                 write!(f, " }}")
@@ -505,7 +499,7 @@ impl Display for Declaration {
                 writeln!(f, "}}")
             }
             Some(Initializer::Scalar(expr)) => write!(f, " = {};", expr),
-            Some(Initializer::InitializerList(inits)) => {
+            Some(Initializer::List(inits)) => {
                 write!(f, " = {{")?;
                 for init in inits {
                     write!(f, "{}, ", init)?;

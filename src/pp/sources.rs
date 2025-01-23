@@ -19,7 +19,7 @@ impl SourceFile {
     pub fn load_from_string(path: PathBuf, contents: &str) -> Self {
         SourceFile {
             path,
-            phase3_group: Tokenizer::new(&contents).group(),
+            phase3_group: Tokenizer::new(contents).group(),
         }
     }
 }

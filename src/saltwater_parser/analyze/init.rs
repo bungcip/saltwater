@@ -73,7 +73,7 @@ impl PureAnalyzer {
         let mut elems = vec![];
         if list.peek().is_none() {
             self.err(SemanticError::EmptyInitializer, location);
-            return Initializer::InitializerList(elems);
+            return Initializer::List(elems);
         }
         // char [][3] = {1};
         while let Some(elem) = list.peek() {
@@ -127,7 +127,7 @@ impl PureAnalyzer {
                 break;
             }
         }
-        Initializer::InitializerList(elems)
+        Initializer::List(elems)
     }
 }
 
@@ -208,7 +208,7 @@ mod test {
         for res in &parsed {
             match res.as_ref() {
                 Ok(Declaration {
-                    init: Some(Initializer::InitializerList(_)),
+                    init: Some(Initializer::List(_)),
                     ..
                 }) => {}
                 Ok(other) => panic!("expected initializer list, got declaration: {}", other),

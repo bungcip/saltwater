@@ -158,6 +158,7 @@ impl<I: Lexer> Parser<I> {
         }
         Ok((specifiers, all_locs))
     }
+
     /// ```yacc
     /// struct_or_union_specifier
     /// : (struct | union) '{' struct_declaration + '}'
@@ -264,14 +265,13 @@ impl<I: Lexer> Parser<I> {
         };
         Ok(Locatable::new(decl_list, location.maybe_merge(spec_location)))
     }
+
     /// ```yacc
     /// enum_specifier
     /// : 'enum' '{' enumerator_list '}'
     /// | 'enum' identifier '{' enumerator_list '}'
-
-    // this is not valid for declaring an enum, but it's fine for an enum we've already seen
-    // e.g. `enum E { A }; enum E e;`
-
+    /// this is not valid for declaring an enum, but it's fine for an enum we've already seen
+    /// e.g. `enum E { A }; enum E e;`
     /// | 'enum' identifier
     /// ;
     ///
@@ -286,8 +286,7 @@ impl<I: Lexer> Parser<I> {
     /// ;
     /// ```
     /// <http://www.quut.com/c/ANSI-C-grammar-y.html#enum_specifier>
-
-    // we've already seen an `enum` token,, `location` is where we saw it
+    /// we've already seen an `enum` token,, `location` is where we saw it
     fn enum_specifier(&mut self, mut location: Location) -> SyntaxResult<Locatable<DeclarationSpecifier>> {
         let name = self.match_id().map(|id| {
             location = location.merge(id.location);

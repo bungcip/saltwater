@@ -17,10 +17,11 @@ use std::fmt::{self, Display};
 // use crate::saltwater_parser::lex::Keyword;
 
 // used by both `ast` and `hir`
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
 pub enum StorageClass {
     Static,
     Extern,
+    #[default]
     Auto,
     Register,
     Typedef,

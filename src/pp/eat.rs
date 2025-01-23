@@ -1,5 +1,4 @@
 /// basically copying from https://github.com/eddyb/cprep/
-
 /// Eat from an iterator.
 pub trait Eat: Iterator + Clone {
     fn try_eat<T>(&mut self, f: impl FnOnce(&mut Self) -> Option<T>) -> Option<T> {

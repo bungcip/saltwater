@@ -82,10 +82,7 @@ impl Expr {
     /// Constant expressions have been evaluated at compile time
     /// and can be used in static initializers, etc.
     pub fn is_constexpr(&self) -> bool {
-        match self.expr {
-            ExprType::Literal(_) => true,
-            _ => false,
-        }
+        matches!(self.expr, ExprType::Literal(_))
     }
 
     /// Returns a `Literal` if this is a literal, or the original expression otherwise

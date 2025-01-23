@@ -121,7 +121,7 @@ impl<'a> Macro<'a> {
             Some(if is_variadic && name == "__VA_ARGS__" {
                 params.len()
             } else {
-                params.get_full(&name[..])?.0
+                params.get_full(name)?.0
             })
         };
 
@@ -394,10 +394,8 @@ impl Macro<'_> {
                     } else {
                         return None;
                     };
-                } else {
-                    if args.len() == expected_args {
-                        return None;
-                    }
+                } else if args.len() == expected_args {
+                    return None;
                 }
             }
 
@@ -620,7 +618,7 @@ impl Macro<'_> {
             &substituted_tokens[..]
         };
 
-        Some(phase4.expand_macros(&substituted_tokens, &OuterExpansion::Macro { name, outer }))
+        Some(phase4.expand_macros(substituted_tokens, &OuterExpansion::Macro { name, outer }))
     }
 }
 
@@ -728,7 +726,7 @@ impl<'a> CondEval<'a> {
             // NOTE(eddyb) a prefix of `0` means a base other than 10.
             if !lit.starts_with(|c| matches!(c, '1'..='9')) {
                 // HACK(eddyb) still need to support `0` itself
-                let is_zero = lit.starts_with("0") && !lit[1..].starts_with(|c| matches!(c, '0'..='9'));
+                let is_zero = lit.starts_with("0") && !lit[1..].starts_with(|c: char| c.is_ascii_digit());
                 if !is_zero {
                     return Err(());
                 }
@@ -829,7 +827,7 @@ impl<'a> CondEval<'a> {
     }
 
     fn eval(mut self) -> bool {
-        self.ternary().map_or(false, |v| v != 0) && self.tokens.next().is_none()
+        self.ternary().is_ok_and(|v| v != 0) && self.tokens.next().is_none()
     }
 }
 

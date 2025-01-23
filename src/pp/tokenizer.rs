@@ -70,7 +70,7 @@ impl Iterator for Tokenizer<'_> {
 
             '.' | '0'..='9' => {
                 let (dot, digit) = if c == '.' {
-                    (Some(c), self.phase2.eat_if(|c| matches!(c, '0'..='9')))
+                    (Some(c), self.phase2.eat_if(|c| c.is_ascii_digit()))
                 } else {
                     (None, Some(c))
                 };

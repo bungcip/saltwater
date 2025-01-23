@@ -419,9 +419,8 @@ pub enum SyntaxError {
 pub enum CppError {
     /// A user-defined error (`#error`) was present.
     /// The `Vec<Token>` contains the tokens which followed the error.
-
-    // TODO: this allocates a string for each token,
-    // might be worth separating out into a function at some point
+    /// TODO: this allocates a string for each token,
+    /// might be worth separating out into a function at some point
     #[error("#error {}", (.0).iter().map(|t| t.to_string()).collect::<Vec<_>>().join(" "))]
     User(Vec<Token>),
 
@@ -616,25 +615,13 @@ impl CompileError {
 
 impl Error {
     pub fn is_lex_err(&self) -> bool {
-        if let Error::Lex(_) = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Error::Lex(_))
     }
     pub fn is_syntax_err(&self) -> bool {
-        if let Error::Syntax(_) = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Error::Syntax(_))
     }
     pub fn is_semantic_err(&self) -> bool {
-        if let Error::Semantic(_) = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Error::Semantic(_))
     }
 }
 

@@ -47,10 +47,7 @@ impl BinaryPrecedence {
     }
     fn left_associative(self) -> bool {
         use BinaryPrecedence::*;
-        match self {
-            Ternary | Assignment(_) => false,
-            _ => true,
-        }
+        !matches!(self, Ternary | Assignment(_))
     }
     fn constructor(self) -> impl Fn(Expr, Expr) -> ExprType {
         use crate::saltwater_parser::data::lex::ComparisonToken;

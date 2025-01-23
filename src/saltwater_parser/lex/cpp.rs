@@ -418,10 +418,8 @@ impl<'a> PreProcessor<'a> {
     /// Otherwise, return `None`.
     fn next_cpp_token(&mut self) -> Option<CppResult<CppToken>> {
         let next_token = self.file_processor.next()?;
-        let is_hash = match next_token {
-            Ok(Locatable { data: Token::Hash, .. }) => true,
-            _ => false,
-        };
+        let is_hash = matches!(next_token, Ok(Locatable { data: Token::Hash, .. }));
+
         Some(if is_hash && !self.file_processor.seen_line_token() {
             let line = self.file_processor.line();
             match self.file_processor.next_non_whitespace()? {

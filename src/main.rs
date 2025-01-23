@@ -4,7 +4,6 @@ mod pp;
 mod saltwater_parser;
 
 use std::collections::VecDeque;
-use std::fmt::Write;
 use std::fs::File;
 use std::io::{self, Read};
 use std::num::NonZeroUsize;
@@ -18,11 +17,9 @@ use arcstr::ArcStr;
 use codegen::{assemble, compile, link};
 use pico_args::Arguments;
 use saltwater_parser::{CompileWarning, Files, Locatable, Opt, PreProcessor, Token};
-// use saltwater_parser::data::{error::CompileWarning, Location};
-// use saltwater_parser::{preprocess, Error, Files, Opt, Program};
 use tempfile::NamedTempFile;
 
-use crate::saltwater_parser::{preprocess, Error, Program};
+use crate::saltwater_parser::{Error, Program};
 
 static ERRORS: AtomicUsize = AtomicUsize::new(0);
 static WARNINGS: AtomicUsize = AtomicUsize::new(0);
@@ -130,7 +127,7 @@ macro_rules! sw_try {
 fn preprocess_v2(buf: &str, opt: Opt) -> Program<VecDeque<Locatable<Token>>> {
     // NOTE: for now, we just dump it to &str and use original saltwater preprocessor
     // then we must remove all broken code in processor to new code
-    let mut temp_buffer = driver::preprocess_v1(buf, opt.filename.clone());
+    let temp_buffer = driver::preprocess_v1(buf, opt.filename.clone());
     let buf = temp_buffer.as_str();
 
     let path = opt.search_path.iter().map(|p| p.into());

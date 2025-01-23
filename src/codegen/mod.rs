@@ -207,7 +207,7 @@ impl Compiler {
                 let val = self.compile_expr(*expr, builder)?;
                 builder.ins().stack_store(val.ir_val, stack_slot, 0);
             }
-            Initializer::InitializerList(_) => unimplemented!("aggregate dynamic initialization"),
+            Initializer::List(_) => unimplemented!("aggregate dynamic initialization"),
             Initializer::FunctionBody(_) => unreachable!("functions can't be stored on the stack"),
         }
         Ok(())
@@ -408,7 +408,7 @@ pub fn link(obj_file: &Path, output: &Path) -> Result<(), std::io::Error> {
 
     // link the .o file using host linker
     let status = Command::new("cc")
-        .args([&obj_file, Path::new("-o"), output])
+        .args([obj_file, Path::new("-o"), output])
         .status()
         .map_err(|err| {
             if err.kind() == ErrorKind::NotFound {

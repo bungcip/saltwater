@@ -217,10 +217,7 @@ impl Type {
     }
     #[inline]
     pub fn is_floating(&self) -> bool {
-        match self {
-            Type::Float | Type::Double => true,
-            _ => false,
-        }
+        matches!(self, Type::Float | Type::Double)
     }
     #[inline]
     pub(crate) fn is_arithmetic(&self) -> bool {
@@ -228,17 +225,11 @@ impl Type {
     }
     #[inline]
     pub fn is_pointer(&self) -> bool {
-        match self {
-            Type::Pointer(_, _) => true,
-            _ => false,
-        }
+        matches!(self, Type::Pointer(_, _))
     }
     #[inline]
     pub fn is_function(&self) -> bool {
-        match self {
-            Type::Function(_) => true,
-            _ => false,
-        }
+        matches!(self, Type::Function(_))
     }
 }
 
@@ -342,10 +333,7 @@ pub(super) fn print_type(ctype: &Type, name: Option<InternedStr>, f: &mut Format
                 postfixes.push(buff);
             }
             Pointer(_, qs) => {
-                let needs_parens = match unrolled_type[index + 1] {
-                    Array(_, _) | Function(_) => true,
-                    _ => false,
-                };
+                let needs_parens = matches!(unrolled_type[index + 1], Array(_, _) | Function(_));
 
                 prefixes.push(format!(
                     "{}*{}",

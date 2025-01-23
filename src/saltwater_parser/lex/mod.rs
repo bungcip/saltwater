@@ -103,9 +103,8 @@ impl Lexer {
             assert!(self.lookahead.is_none());
             self.chars().next()
         }
-        .map(|c| {
+        .inspect(|c| {
             self.location.offset += c.len_utf8() as u32;
-            c
         })
     }
 
@@ -605,7 +604,7 @@ pub(crate) trait LiteralParser {
     /// If the next character is `item`, consume it and return true.
     /// Otherwise, return false.
     fn match_next(&mut self, item: char) -> bool {
-        if self.peek().map_or(false, |c| c == item) {
+        if self.peek() == Some(item) {
             self.next_char();
             true
         } else {
@@ -642,22 +641,20 @@ pub(crate) trait LiteralParser {
                     'f' => b'\x0c', // form feed
                     '?' => b'?',    // a literal '?', for trigraphs
                     '0'..='9' => {
-                        return self.parse_octal_char_escape(c).map_err(|err| {
+                        return self.parse_octal_char_escape(c).inspect_err(|_| {
                             // try to avoid extraneous errors, but don't try too hard
                             self.match_next('\'');
-                            err
                         });
                     }
                     'x' => {
-                        return self.parse_hex_char_escape().map_err(|err| {
+                        return self.parse_hex_char_escape().inspect_err(|_| {
                             // try to avoid extraneous errors, but don't try too hard
                             self.match_next('\'');
-                            err
                         });
                     }
                     '\0'..='\x7f' => {
                         self.warn_loc(
-                            &format!("unknown character escape '\\{}'", c),
+                            format!("unknown character escape '\\{}'", c),
                             self.span(self.get_location().offset - 1),
                         );
                         c as u8

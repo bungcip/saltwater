@@ -18,7 +18,7 @@ use saltwater_parser::data::{
     StorageClass, *,
 };
 
-const_assert!(PTR_SIZE <= std::usize::MAX as u16);
+const_assert!(PTR_SIZE <= usize::MAX as u16);
 const ZERO_PTR: [u8; PTR_SIZE as usize] = [0; PTR_SIZE as usize];
 
 macro_rules! cast {
@@ -93,7 +93,7 @@ impl Compiler {
             let mut ctype = metadata.ctype.clone();
             if let Type::Array(_, size @ ArrayType::Unbounded) = &mut ctype {
                 if let Some(len) = match &init {
-                    Initializer::InitializerList(list) => Some(list.len()),
+                    Initializer::List(list) => Some(list.len()),
                     Initializer::Scalar(expr) => match &expr.expr {
                         ExprType::Literal(LiteralValue::Str(s)) => Some(s.len()),
                         _ => None,
@@ -210,7 +210,7 @@ impl Compiler {
         location: &Location,
     ) -> CompileResult<()> {
         match initializer {
-            Initializer::InitializerList(mut initializers) => match ctype {
+            Initializer::List(mut initializers) => match ctype {
                 Type::Array(ty, ArrayType::Unbounded) => self.init_array(ctx, buf, offset, initializers, ty, location),
                 Type::Array(ty, ArrayType::Fixed(size)) => {
                     if initializers.len() as u64 > *size {
@@ -338,10 +338,10 @@ fn into_bytes(
         LiteralValue::Float(f) => Ok(match ir_type {
             types::F32 => {
                 let cast = f as f32;
-                if (f64::from(cast) - f).abs() >= std::f64::EPSILON {
+                if (f64::from(cast) - f).abs() >= f64::EPSILON {
                     let warning = format!(
                         "conversion from double to float loses precision ({} is different from {} by more than DBL_EPSILON ({}))",
-                        f, std::f64::EPSILON, f64::from(cast)
+                        f, f64::EPSILON, f64::from(cast)
                     );
                     error_handler.warn(&warning, *location);
                 }
