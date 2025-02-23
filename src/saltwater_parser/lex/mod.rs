@@ -808,7 +808,9 @@ pub(crate) trait LiteralParser {
         let mut whitespace = String::new();
         loop {
             // whitespace
-            while self.peek().is_some_and(|c| c.is_ascii_whitespace() && !(stop_at_newline && c == '\n'))
+            while self
+                .peek()
+                .is_some_and(|c| c.is_ascii_whitespace() && !(stop_at_newline && c == '\n'))
             {
                 if let Some(c) = self.next_char() {
                     whitespace.push(c);

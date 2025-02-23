@@ -8,7 +8,7 @@ pub struct Ident {
 
 impl PartialEq for Ident {
     fn eq(&self, other: &Ident) -> bool {
-        &self[..] == &other[..]
+        self[..] == other[..]
     }
 }
 

@@ -256,7 +256,7 @@ impl Tokenizer<'_> {
 
             let mut tokens = vec![];
 
-            for tok in self.by_ref(){
+            for tok in self.by_ref() {
                 if let Token::Newline = tok {
                     break;
                 }
