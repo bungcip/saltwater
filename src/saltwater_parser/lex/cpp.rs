@@ -23,13 +23,12 @@
 //!
 //! This is the file for the `PreProcessor`.
 
-use lazy_static::lazy_static;
-
 use arcstr::{ArcStr, Substr};
 use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
 use std::convert::TryFrom;
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 
 use super::files::FileProcessor;
 use super::replace::{Definition, Definitions, replace, replace_iter};
@@ -1199,8 +1198,8 @@ impl TryFrom<&str> for DirectiveKind {
     }
 }
 
-lazy_static! {
-    static ref KEYWORDS: HashMap<&'static str, Keyword> = map!{
+static KEYWORDS: LazyLock<HashMap<&'static str, Keyword>> = LazyLock::new(|| {
+    map! {
         // control flow
         "if" => Keyword::If,
         "else" => Keyword::Else,
@@ -1257,8 +1256,8 @@ lazy_static! {
         "_Alignas" => Keyword::Alignas,
         "_Generic" => Keyword::Generic,
         "_Static_assert" => Keyword::StaticAssert,
-    };
-}
+    }
+});
 
 #[cfg(test)]
 mod tests {

@@ -1,8 +1,7 @@
 use std::fmt;
-use std::sync::RwLock;
 
 use lasso::{Rodeo, Spur};
-use lazy_static::lazy_static;
+use std::sync::{LazyLock, RwLock};
 
 /// A opaque identifier for a string which has been [interned].
 ///
@@ -21,36 +20,32 @@ impl fmt::Debug for InternedStr {
     }
 }
 
-lazy_static! {
-    pub static ref STRINGS: RwLock<Rodeo<Spur>> = RwLock::new(Rodeo::default());
-    static ref EMPTY_STRING: InternedStr = InternedStr::get_or_intern("");
-}
+pub static STRINGS: LazyLock<RwLock<Rodeo<Spur>>> = LazyLock::new(|| RwLock::new(Rodeo::default()));
+static EMPTY_STRING: LazyLock<InternedStr> = LazyLock::new(|| InternedStr::get_or_intern(""));
 
 impl InternedStr {
     /// Return whether `self` is the empty string.
     pub fn is_empty(self) -> bool {
+        // Deref the LazyLock to get a reference to EMPTY_STRING.
         self == *EMPTY_STRING
     }
+
     /// Convert this identifier back into the original `String`, cloning it along the way.
     ///
     /// # Panics
     /// This function will panic if another thread panicked while accessing the global string pool.
-    ///
     pub fn resolve_and_clone(self) -> String {
-        let strings = crate::saltwater_parser::intern::STRINGS
-            .read()
-            .expect("failed to lock String cache for reading");
+        let strings = STRINGS.read().expect("failed to lock String cache for reading");
         let tmp = strings.resolve(&self.0);
-
         tmp.to_string()
     }
+
     /// Intern this string into the string pool and return an opaque identifier.
     ///
     /// If `val` is already present, it will not be duplicated (i.e. this method is idempotent).
     ///
     /// # Panics
     /// This function will panic if another thread panicked while accessing the global string pool.
-    ///
     pub fn get_or_intern<T: AsRef<str> + Into<String>>(val: T) -> InternedStr {
         InternedStr(
             STRINGS

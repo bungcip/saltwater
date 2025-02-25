@@ -120,12 +120,14 @@ mod codegen_impls {
     };
     use cranelift_codegen::isa::{CallConv, TargetIsa};
 
-    // TODO: make this const when const_if_match is stabilized
-    // TODO: see https://github.com/rust-lang/rust/issues/49146
-    lazy_static::lazy_static! {
-        /// The calling convention for the current target.
-        pub(crate) static ref CALLING_CONVENTION: CallConv = CallConv::triple_default(&TARGET);
-    }
+    #[cfg(target_os = "linux")]
+    pub(crate) const CALLING_CONVENTION: CallConv = CallConv::SystemV;
+
+    #[cfg(target_os = "macos")]
+    pub(crate) const CALLING_CONVENTION: CallConv = CallConv::AppleAarch64;
+
+    #[cfg(target_os = "windows")]
+    pub(crate) const CALLING_CONVENTION: CallConv = CallConv::WindowsFastcall;
 
     impl FunctionType {
         pub fn should_return(&self) -> bool {
@@ -214,7 +216,7 @@ mod codegen_impls {
                 vec![AbiParam::new(self.return_type.as_ir_type())]
             };
             Signature {
-                call_conv: *CALLING_CONVENTION,
+                call_conv: CALLING_CONVENTION,
                 params,
                 returns: return_type,
             }
