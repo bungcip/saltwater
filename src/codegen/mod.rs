@@ -128,7 +128,6 @@ impl Compiler {
     // 3. should always declare `id` as export or local.
     // 2. and 4. should be a no-op.
     fn declare_func(&mut self, symbol: Symbol, is_definition: bool) -> CompileResult<FuncId> {
-        use crate::get_str;
         if !is_definition {
             // case 2 and 4
             if let Some(Id::Function(func_id)) = self.declarations.get(&symbol) {
@@ -147,9 +146,14 @@ impl Compiler {
             StorageClass::Static => Linkage::Local,
             StorageClass::Register | StorageClass::Typedef => unreachable!(),
         };
+        let strings = crate::saltwater_parser::intern::STRINGS
+            .read()
+            .expect("failed to lock String cache for reading");
+        let tmp = strings.resolve(&metadata.id.0);
+
         let func_id = self
             .module
-            .declare_function(get_str!(metadata.id), linkage, &signature)
+            .declare_function(tmp, linkage, &signature)
             .unwrap_or_else(|err| panic!("{}", err));
         self.declarations.insert(symbol, Id::Function(func_id));
         Ok(func_id)
@@ -381,11 +385,11 @@ pub fn compile(module: ObjectModule, buf: &str, opt: Opt) -> Program<ObjectModul
         }
     }
     let warns = compiler.error_handler.warnings;
-    let (result, ir_warnings) = if let Some(err) = err {
+    let (result, ir_warnings) = match err { Some(err) => {
         (Err(err), warns)
-    } else {
+    } _ => {
         (Ok(compiler.module), warns)
-    };
+    }};
     program.warnings.extend(ir_warnings);
     Program {
         result: result.map_err(|errs| vec_deque![errs]),

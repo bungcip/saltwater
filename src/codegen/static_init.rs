@@ -52,7 +52,6 @@ impl Compiler {
         init: Option<Initializer>,
         location: Location,
     ) -> CompileResult<()> {
-        use crate::get_str;
         let metadata = symbol.get();
         if let StorageClass::Typedef = metadata.storage_class {
             return Ok(());
@@ -72,9 +71,15 @@ impl Compiler {
         //     return Ok(());
         // }
         let linkage = linkage_from_storage_class(metadata.storage_class).map_err(err_closure)?;
+
+        let strings = crate::saltwater_parser::intern::STRINGS
+            .read()
+            .expect("failed to lock String cache for reading");
+        let tmp = strings.resolve(&metadata.id.0);
+
         let id = self
             .module
-            .declare_data(get_str!(metadata.id), linkage, !metadata.qualifiers.c_const, false)
+            .declare_data(tmp, linkage, !metadata.qualifiers.c_const, false)
             .map_err(|err| Locatable {
                 data: format!("error storing static value: {}", err),
                 location,

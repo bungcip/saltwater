@@ -38,16 +38,16 @@ lazy_static! {
 ///
 /// [`InternedStr::resolve_and_clone`]: intern/struct.InternedStr.html#method.resolve_and_clone
 /// [`intern::STRINGS`]: intern/struct.STRINGS.html
-#[macro_export]
-macro_rules! get_str {
-    ($self: expr) => {{
-        let tmp = $self.0;
-        $crate::saltwater_parser::intern::STRINGS
-            .read()
-            .expect("failed to lock String cache for reading")
-            .resolve(&tmp)
-    }};
-}
+// #[macro_export]
+// macro_rules! get_str {
+//     ($self: expr) => {{
+//         let strings = $crate::saltwater_parser::intern::STRINGS
+//             .read()
+//             .expect("failed to lock String cache for reading");
+//         let tmp = strings.resolve(&$self.0);
+//         tmp
+//     }};
+// }
 
 impl InternedStr {
     /// Return whether `self` is the empty string.
@@ -56,14 +56,16 @@ impl InternedStr {
     }
     /// Convert this identifier back into the original `String`, cloning it along the way.
     ///
-    /// # See also
-    /// [`get_str!`](../macro.get_str.html)
-    ///
     /// # Panics
     /// This function will panic if another thread panicked while accessing the global string pool.
     ///
     pub fn resolve_and_clone(self) -> String {
-        get_str!(self).to_string()
+        let strings = crate::saltwater_parser::intern::STRINGS
+            .read()
+            .expect("failed to lock String cache for reading");
+        let tmp = strings.resolve(&self.0);
+
+        tmp.to_string()
     }
     /// Intern this string into the string pool and return an opaque identifier.
     ///
@@ -84,7 +86,12 @@ impl InternedStr {
 
 impl fmt::Display for InternedStr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", get_str!(self))
+        let strings = crate::saltwater_parser::intern::STRINGS
+            .read()
+            .expect("failed to lock String cache for reading");
+        let tmp = strings.resolve(&self.0);
+
+        write!(f, "{}", tmp)
     }
 }
 

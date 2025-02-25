@@ -178,7 +178,7 @@ impl<I: Lexer> Parser<I> {
             start = start.merge(id.location);
             id.data
         });
-        let members = if let Some(token) = self.match_next(&Token::LeftBrace) {
+        let members = match self.match_next(&Token::LeftBrace) { Some(token) => {
             start = start.merge(token.location);
             let mut members = Vec::new();
             loop {
@@ -198,9 +198,9 @@ impl<I: Lexer> Parser<I> {
                 members.push(decl.data);
             }
             Some(members)
-        } else {
+        } _ => {
             None
-        };
+        }};
         let spec = StructSpecifier { name, members };
         let spec = if is_struct {
             DeclarationSpecifier::Struct(spec)
@@ -247,13 +247,13 @@ impl<I: Lexer> Parser<I> {
             } else {
                 None
             };
-            let bitfield = if let Some(token) = self.match_next(&Token::Colon) {
+            let bitfield = match self.match_next(&Token::Colon) { Some(token) => {
                 let size = self.ternary_expr()?;
                 spec_location = Some(token.location.merge(size.location));
                 Some(size)
-            } else {
+            } _ => {
                 None
-            };
+            }};
             declarators.push(ast::StructDeclarator { decl, bitfield });
             if self.match_next(&Token::Comma).is_none() {
                 break self.expect(Token::Semicolon)?.location;
@@ -292,7 +292,7 @@ impl<I: Lexer> Parser<I> {
             location = location.merge(id.location);
             id.data
         });
-        let body = if let Some(token) = self.match_next(&Token::LeftBrace) {
+        let body = match self.match_next(&Token::LeftBrace) { Some(token) => {
             location = location.merge(token.location);
             let mut body = Vec::new();
             loop {
@@ -314,9 +314,9 @@ impl<I: Lexer> Parser<I> {
                 }
             }
             Some(body)
-        } else {
+        } _ => {
             None
-        };
+        }};
         let decl = DeclarationSpecifier::Enum { name, members: body };
         Ok(Locatable::new(decl, location))
     }
@@ -535,12 +535,12 @@ impl<I: Lexer> Parser<I> {
                                 .push_back(Locatable::new(SyntaxError::StaticInConcreteArray, token.location));
                         }
                     }
-                    let (size, location) = if let Some(token) = self.match_next(&Token::RightBracket) {
+                    let (size, location) = match self.match_next(&Token::RightBracket) { Some(token) => {
                         (None, token.location)
-                    } else {
+                    } _ => {
                         let expr = Box::new(self.expr()?);
                         (Some(expr), self.expect(Token::RightBracket)?.location)
-                    };
+                    }};
                     Locatable::new(InternalDeclaratorType::Array { size }, location)
                 }
                 Token::LeftParen => self.parameter_type_list()?,
@@ -738,11 +738,11 @@ pub(crate) mod test {
     fn decl(decl: &str) -> CompileResult<Locatable<ExternalDeclaration>> {
         let mut p = parser(decl);
         let exp = p.external_declaration();
-        if let Some(err) = p.error_handler.pop_front() {
+        match p.error_handler.pop_front() { Some(err) => {
             Err(err)
-        } else {
+        } _ => {
             exp.map_err(CompileError::from)
-        }
+        }}
     }
     fn display(s: &str) -> String {
         decl(s).unwrap().data.to_string()

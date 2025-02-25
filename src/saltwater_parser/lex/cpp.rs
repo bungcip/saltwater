@@ -34,7 +34,6 @@ use std::path::{Path, PathBuf};
 use super::files::FileProcessor;
 use super::replace::{replace, replace_iter, Definition, Definitions};
 use super::{Lexer, LiteralParser, Token};
-use crate::get_str;
 use crate::saltwater_parser::arch::TARGET;
 use crate::saltwater_parser::data::error::CppError;
 use crate::saltwater_parser::data::lex::{Keyword, LiteralToken};
@@ -220,11 +219,11 @@ impl Iterator for PreProcessor<'_> {
         // Second, the current token could be an identifier that was `#define`d to an empty token list.
         // This loop is for the second case, not the first.
         loop {
-            let replacement = if let Some(err) = self.error_handler.pop_front() {
+            let replacement = match self.error_handler.pop_front() { Some(err) => {
                 return Some(Err(err));
-            } else if let Some(token) = self.pending.pop_front() {
+            } _ => { match self.pending.pop_front() { Some(token) => {
                 self.handle_token(token.data, token.location)
-            } else {
+            } _ => {
                 // This function does not perform macro replacement,
                 // so if it returns None we got to EOF.
                 match self.next_cpp_token()? {
@@ -242,7 +241,7 @@ impl Iterator for PreProcessor<'_> {
                         }
                     },
                 }
-            };
+            }}}};
             if let Some(token) = replacement {
                 return Some(token);
             }
@@ -289,7 +288,13 @@ impl<'a> PreProcessor<'a> {
         })) = &mut token
         {
             if let Token::Id(name) = &data {
-                if let Some(keyword) = KEYWORDS.get(get_str!(name)) {
+                let strings = crate::saltwater_parser::intern::STRINGS
+                    .read()
+                    .expect("failed to lock String cache for reading");
+                let tmp = strings.resolve(&name.0);
+    
+
+                if let Some(keyword) = KEYWORDS.get(tmp) {
                     *data = Token::Keyword(*keyword);
                 }
             }
@@ -427,7 +432,12 @@ impl<'a> PreProcessor<'a> {
                     data: Token::Id(id),
                     location,
                 }) if self.file_processor.line() == line => {
-                    if let Ok(directive) = DirectiveKind::try_from(get_str!(id)) {
+                    let strings = crate::saltwater_parser::intern::STRINGS
+                        .read()
+                        .expect("failed to lock String cache for reading");
+                    let tmp = strings.resolve(&id.0);
+
+                    if let Ok(directive) = DirectiveKind::try_from(tmp) {
                         Ok(Locatable::new(CppToken::Directive(directive), location))
                     } else {
                         Err(Locatable::new(CppError::InvalidDirective.into(), location))
@@ -445,8 +455,7 @@ impl<'a> PreProcessor<'a> {
         } else {
             next_token.map(Locatable::from)
         })
-    }
-    // this function does _not_ perform macro substitution
+    }    // this function does _not_ perform macro substitution
     fn expect_id(&mut self) -> CppResult<InternedStr> {
         let location = self.file_processor.span(self.file_processor.offset());
         match self.file_processor.next() {
@@ -1805,11 +1814,11 @@ h",
         let filename = "helloworld.c";
         let mut cpp = PreProcessorBuilder::new("__FILE__").filename(filename).build();
         let token = cpp.next_non_whitespace().unwrap().unwrap().data;
-        if let Token::Literal(LiteralToken::Str(rcstrs)) = token {
+        match token { Token::Literal(LiteralToken::Str(rcstrs)) => {
             assert_eq!(rcstrs.first().unwrap().as_str(), format!("\"{}\"", filename));
-        } else {
+        } _ => {
             panic!();
-        }
+        }}
     }
     #[test]
     fn builtins_date_time() {

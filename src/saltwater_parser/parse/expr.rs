@@ -194,16 +194,16 @@ impl<I: Lexer> Parser<I> {
         let mut prefixes = Vec::new();
         // hack: `sizeof` can be either a unary or primary expression, so we special-case it
         let mut inner = loop {
-            if let Some(Locatable {
+            match self.match_prefix_operator()
+            { Some(Locatable {
                 data: constructor,
                 location,
-            }) = self.match_prefix_operator()
-            {
+            }) => {
                 prefixes.push((constructor, location));
             // these keywords can be followed by either a type name or an expression
-            } else if let Some(keyword) = self.match_keywords(&[Keyword::Sizeof, Keyword::Alignof]) {
+            } _ => if let Some(keyword) = self.match_keywords(&[Keyword::Sizeof, Keyword::Alignof]) {
                 // `sizeof(int)` is a primary expr
-                if let Some(mut ctype) = self.parenthesized_type()? {
+                match self.parenthesized_type()? { Some(mut ctype) => {
                     ctype.location = keyword.location.merge(ctype.location);
                     let constructor = if keyword.data == Keyword::Sizeof {
                         ExprType::SizeofType
@@ -213,17 +213,17 @@ impl<I: Lexer> Parser<I> {
                     // short-circuit here
                     break self.postfix_expr(ctype.map(constructor))?;
                 // `sizeof +1` is a unary expr
-                } else {
+                } _ => {
                     let constructor = if keyword.data == Keyword::Sizeof {
                         ExprType::SizeofExpr
                     } else {
                         ExprType::AlignofExpr
                     };
                     prefixes.push((Box::new(move |a| constructor(Box::new(a))), keyword.location));
-                }
+                }}
             } else {
                 break self.primary_expr()?;
-            }
+            }}
         };
         while let Some((constructor, location)) = prefixes.pop() {
             inner = Locatable::new(constructor(inner), location);
@@ -239,7 +239,7 @@ impl<I: Lexer> Parser<I> {
     fn primary_expr(&mut self) -> SyntaxResult<Expr> {
         // primary expression
         // this must be an expression since we already consumed all the prefix expressions
-        let primary = if let Some(paren) = self.match_next(&Token::LeftParen) {
+        let primary = match self.match_next(&Token::LeftParen) { Some(paren) => {
             // take out lots of guards since there's a lot of indirection
             let _guard = self.recursion_check();
             let _guard2 = self.recursion_check();
@@ -247,17 +247,17 @@ impl<I: Lexer> Parser<I> {
             let end_loc = self.expect(Token::RightParen)?.location;
             inner.location = paren.location.merge(end_loc);
             inner
-        } else if let Some(loc) = self.match_id() {
+        } _ => if let Some(loc) = self.match_id() {
             loc.map(ExprType::Id)
-        } else if let Some(literal) = self.match_literal() {
+        } else { match self.match_literal() { Some(literal) => {
             let loc = literal.location;
             match literal.data.parse() {
                 Ok(literal) => loc.with(literal).map(ExprType::Literal),
                 Err(err) => return Err(loc.with(err)),
             }
-        } else {
+        } _ => {
             return Err(self.next_location().with(SyntaxError::MissingPrimary));
-        };
+        }}}};
         self.postfix_expr(primary)
     }
 
@@ -304,7 +304,7 @@ impl<I: Lexer> Parser<I> {
         Some(Locatable::new(Box::new(move |e| func(Box::new(e))), loc))
     }
     // '[' expr ']' | '(' argument* ')' | '.' ID | '->' ID | '++' | '--'
-    fn match_postfix_op(&mut self) -> SyntaxResult<Option<Locatable<impl UnaryExprFn>>> {
+    fn match_postfix_op(&mut self) -> SyntaxResult<Option<Locatable<impl UnaryExprFn + use<I>>>> {
         let next_location = |this: &mut Parser<_>| this.next_token().unwrap().location;
         let needs_id = |this: &mut Self, constructor: fn(Box<Expr>, InternedStr) -> ExprType| {
             let start = next_location(this);
@@ -334,23 +334,23 @@ impl<I: Lexer> Parser<I> {
             Some(Token::LeftParen) => {
                 let mut start = next_location(self);
                 let mut args = Vec::new();
-                if let Some(token) = self.match_next(&Token::RightParen) {
+                match self.match_next(&Token::RightParen) { Some(token) => {
                     start = start.merge(token.location);
-                } else {
+                } _ => {
                     loop {
                         // TODO: maybe we could do some error handling here and consume the end right paren
                         let arg = self.ternary_expr()?;
                         start.merge(arg.location);
                         args.push(arg);
-                        if let Some(token) = self.match_next(&Token::Comma) {
+                        match self.match_next(&Token::Comma) { Some(token) => {
                             start.merge(token.location);
-                        } else {
+                        } _ => {
                             let token = self.expect(Token::RightParen)?;
                             start = start.merge(token.location);
                             break;
-                        }
+                        }}
                     }
-                };
+                }};
                 (Box::new(move |expr| ExprType::FuncCall(expr, args)), start)
             }
             _ => return Ok(None),

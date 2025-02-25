@@ -80,16 +80,16 @@ impl<T: Lexer> Iterator for Analyzer<T> {
             // Instead of returning `SemanticResult`, the analyzer puts all errors into `error_handler`.
             // This simplifies the logic in `next` greatly.
             // NOTE: this returns errors for a declaration before the declaration itself
-            if let Some(err) = self.inner.error_handler.pop_front() {
+            match self.inner.error_handler.pop_front() { Some(err) => {
                 return Some(Err(err));
             // If we saw `int i, j, k;`, we treated those as different declarations
             // `j, k` will be stored into `pending`
-            } else if let Some(decl) = self.inner.pending.pop_front() {
+            } _ => { match self.inner.pending.pop_front() { Some(decl) => {
                 if self.debug {
                     println!("hir: {}", decl.data);
                 }
                 return Some(Ok(decl));
-            }
+            } _ => {}}}}
             // Now do the real work.
             let next = match self.declarations.next()? {
                 Err(err) => return Some(Err(err)),
