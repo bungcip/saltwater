@@ -219,11 +219,7 @@ impl PureAnalyzer {
                 }
                 if let Type::Enum(ident, members) = &meta.ctype {
                     let mapper = |(member, value): &(InternedStr, i64)| {
-                        if name == *member {
-                            Some(*value)
-                        } else {
-                            None
-                        }
+                        if name == *member { Some(*value) } else { None }
                     };
                     let enumerator = members.iter().find_map(mapper);
                     // enum e { A }; return A;
@@ -1345,13 +1341,15 @@ mod test {
             qualifiers: Default::default(),
             storage_class: Default::default(),
             ctype: Type::Function(types::FunctionType {
-                params: vec![Variable {
-                    ctype: Type::Void,
-                    id: Default::default(),
-                    qualifiers: Default::default(),
-                    storage_class: StorageClass::Auto,
-                }
-                .insert()],
+                params: vec![
+                    Variable {
+                        ctype: Type::Void,
+                        id: Default::default(),
+                        qualifiers: Default::default(),
+                        storage_class: StorageClass::Auto,
+                    }
+                    .insert(),
+                ],
                 return_type: Box::new(Type::Int(true)),
                 varargs: false,
             }),

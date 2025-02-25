@@ -13,9 +13,10 @@ use super::{Compiler, Id};
 use crate::const_assert;
 use saltwater_parser::arch::{PTR_SIZE, TARGET};
 use saltwater_parser::data::{
+    StorageClass,
     hir::{Expr, ExprType, Initializer, LiteralValue, Symbol},
     types::ArrayType,
-    StorageClass, *,
+    *,
 };
 
 const_assert!(PTR_SIZE <= usize::MAX as u16);
@@ -346,7 +347,9 @@ fn into_bytes(
                 if (f64::from(cast) - f).abs() >= f64::EPSILON {
                     let warning = format!(
                         "conversion from double to float loses precision ({} is different from {} by more than DBL_EPSILON ({}))",
-                        f, f64::EPSILON, f64::from(cast)
+                        f,
+                        f64::EPSILON,
+                        f64::from(cast)
                     );
                     error_handler.warn(&warning, *location);
                 }

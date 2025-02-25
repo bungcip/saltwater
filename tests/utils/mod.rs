@@ -97,16 +97,20 @@ pub fn assert_crash(program: &str, path: PathBuf) {
     #[cfg(unix)]
     {
         use std::os::unix::process::ExitStatusExt;
-        assert!(handle
-            .wait()
-            .expect("call to libc::wait should succeed")
-            .signal()
-            .is_some());
+        assert!(
+            handle
+                .wait()
+                .expect("call to libc::wait should succeed")
+                .signal()
+                .is_some()
+        );
     }
     #[cfg(not(unix))]
     {
         use log::warn;
-        warn!("testing for segfaults is not supported on non-unix platforms, this just checks the return code is non-zero");
+        warn!(
+            "testing for segfaults is not supported on non-unix platforms, this just checks the return code is non-zero"
+        );
         assert!(!handle.wait().unwrap().success());
     }
 }

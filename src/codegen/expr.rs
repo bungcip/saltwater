@@ -1,4 +1,4 @@
-use cranelift::codegen::ir::{types, MemFlags};
+use cranelift::codegen::ir::{MemFlags, types};
 use cranelift::prelude::{FunctionBuilder, InstBuilder, Type as IrType, Value as IrValue};
 use cranelift_codegen::ir::condcodes::IntCC;
 use cranelift_module::Module;
@@ -253,8 +253,8 @@ impl Compiler {
         op: BinaryOp,
         builder: &mut FunctionBuilder,
     ) -> IrResult {
-        use cranelift::codegen::ir::InstBuilder as b;
         use BinaryOp::*;
+        use cranelift::codegen::ir::InstBuilder as b;
         assert_eq!(left.ir_type, right.ir_type);
         let ir_type = ctype.as_ir_type();
         let signed = ctype.is_signed();

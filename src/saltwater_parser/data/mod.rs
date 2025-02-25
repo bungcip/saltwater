@@ -82,8 +82,8 @@ impl TryFrom<u32> for Radix {
 
 #[cfg(test)]
 mod tests {
-    use crate::saltwater_parser::analyze::test::analyze;
     use crate::saltwater_parser::Parser;
+    use crate::saltwater_parser::analyze::test::analyze;
 
     #[test]
     fn type_display() {
@@ -106,17 +106,17 @@ mod tests {
 mod codegen_impls {
     use crate::saltwater_parser::arch::*;
     use crate::saltwater_parser::data::{
+        Type,
         error::CompileError,
         lex::{ComparisonToken, Locatable},
         types::FunctionType,
-        Type,
     };
     use crate::saltwater_parser::intern::InternedStr;
     use cranelift_codegen::ir::Signature;
     use cranelift_codegen::ir::{
+        AbiParam, ArgumentPurpose,
         condcodes::{FloatCC, IntCC},
         types::{self, Type as IrType},
-        AbiParam, ArgumentPurpose,
     };
     use cranelift_codegen::isa::{CallConv, TargetIsa};
 

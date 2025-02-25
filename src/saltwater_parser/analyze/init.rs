@@ -1,7 +1,7 @@
 //! 6.7.9 Initialization
 
 use super::PureAnalyzer;
-use crate::saltwater_parser::data::{ast, error::SemanticError, hir::*, types, Location, Type};
+use crate::saltwater_parser::data::{Location, Type, ast, error::SemanticError, hir::*, types};
 
 impl PureAnalyzer {
     pub(super) fn parse_initializer(

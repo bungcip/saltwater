@@ -38,12 +38,13 @@ impl<I: Lexer> Parser<I> {
                 .with(SyntaxError::Generic("unclosed '{' delimeter at end of file".into()));
             pending_errs.push(actual_err);
         }
-        match pending_errs.pop() { Some(err) => {
-            self.error_handler.extend(pending_errs.into_iter());
-            Err(err)
-        } _ => {
-            Ok(Locatable::new(stmts, location))
-        }}
+        match pending_errs.pop() {
+            Some(err) => {
+                self.error_handler.extend(pending_errs.into_iter());
+                Err(err)
+            }
+            _ => Ok(Locatable::new(stmts, location)),
+        }
     }
     fn declaration(&mut self) -> SyntaxResult<Stmt> {
         let decl = self.external_declaration()?;
@@ -357,11 +358,10 @@ mod tests {
     fn stmt(stmt: &str) -> CompileResult<Stmt> {
         let mut p = parser(stmt);
         let exp = p.statement();
-        match p.error_handler.pop_front() { Some(err) => {
-            Err(err)
-        } _ => {
-            exp.map_err(CompileError::from)
-        }}
+        match p.error_handler.pop_front() {
+            Some(err) => Err(err),
+            _ => exp.map_err(CompileError::from),
+        }
     }
 
     fn assert_stmt_display(left: &str, right: &str) {

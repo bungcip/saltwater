@@ -4,7 +4,7 @@
 
 use super::{cpp::CppResult, files::FileProcessor};
 use crate::saltwater_parser::{
-    error::CppError, CompileError, CompileResult, InternedStr, LiteralToken, Locatable, Location, Token,
+    CompileError, CompileResult, InternedStr, LiteralToken, Locatable, Location, Token, error::CppError,
 };
 use std::collections::{HashMap, HashSet, VecDeque};
 

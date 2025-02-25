@@ -492,12 +492,34 @@ impl Macro<'_> {
                             [Token::Ident(attr)] => (None, attr),
 
                             // FIXME(eddyb) DRY this.
-                            [Token::Ident(scope), Token::Punct(':'), Token::Punct(':'), Token::Ident(attr)]
-                            | [Token::Ident(scope), Token::Whitespace, Token::Punct(':'), Token::Punct(':'), Token::Ident(attr)]
-                            | [Token::Ident(scope), Token::Punct(':'), Token::Punct(':'), Token::Whitespace, Token::Ident(attr)]
-                            | [Token::Ident(scope), Token::Whitespace, Token::Punct(':'), Token::Punct(':'), Token::Whitespace, Token::Ident(attr)] => {
-                                (Some(scope), attr)
-                            }
+                            [
+                                Token::Ident(scope),
+                                Token::Punct(':'),
+                                Token::Punct(':'),
+                                Token::Ident(attr),
+                            ]
+                            | [
+                                Token::Ident(scope),
+                                Token::Whitespace,
+                                Token::Punct(':'),
+                                Token::Punct(':'),
+                                Token::Ident(attr),
+                            ]
+                            | [
+                                Token::Ident(scope),
+                                Token::Punct(':'),
+                                Token::Punct(':'),
+                                Token::Whitespace,
+                                Token::Ident(attr),
+                            ]
+                            | [
+                                Token::Ident(scope),
+                                Token::Whitespace,
+                                Token::Punct(':'),
+                                Token::Punct(':'),
+                                Token::Whitespace,
+                                Token::Ident(attr),
+                            ] => (Some(scope), attr),
 
                             _ => return None,
                         };
@@ -712,11 +734,7 @@ impl<'a> CondEval<'a> {
     fn primary(&mut self) -> Result<i128, ()> {
         if self.eat_op('(') {
             let v = self.ternary()?;
-            if self.eat_op(')') {
-                Ok(v)
-            } else {
-                Err(())
-            }
+            if self.eat_op(')') { Ok(v) } else { Err(()) }
         } else if let Some(name) = self.eat_ident() {
             // Identifiers are supposed to be replaced with `0`, except `true`.
             Ok(if name == "true" { 1 } else { 0 })
@@ -814,11 +832,7 @@ impl<'a> CondEval<'a> {
             }
             let else_ = self.logical_or()?;
 
-            if v != 0 {
-                then
-            } else {
-                else_
-            }
+            if v != 0 { then } else { else_ }
         } else {
             v
         })

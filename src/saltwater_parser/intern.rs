@@ -26,29 +26,6 @@ lazy_static! {
     static ref EMPTY_STRING: InternedStr = InternedStr::get_or_intern("");
 }
 
-/// Return a `&str` corresponding to this identifier.
-///
-/// This `&str` can only be used in expression position;
-/// attempting to assign it to a variable will give a lifetime error.
-/// If you need it to live longer than a single expression, see instead
-/// [`InternedStr::resolve_and_clone`] or [`intern::STRINGS`].
-///
-/// # Panics
-/// This function will panic if another thread panicked while accessing the global string pool.
-///
-/// [`InternedStr::resolve_and_clone`]: intern/struct.InternedStr.html#method.resolve_and_clone
-/// [`intern::STRINGS`]: intern/struct.STRINGS.html
-// #[macro_export]
-// macro_rules! get_str {
-//     ($self: expr) => {{
-//         let strings = $crate::saltwater_parser::intern::STRINGS
-//             .read()
-//             .expect("failed to lock String cache for reading");
-//         let tmp = strings.resolve(&$self.0);
-//         tmp
-//     }};
-// }
-
 impl InternedStr {
     /// Return whether `self` is the empty string.
     pub fn is_empty(self) -> bool {

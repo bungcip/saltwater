@@ -485,8 +485,8 @@ mod proptest_impl {
 pub(crate) mod test {
     use crate::*;
 
-    use self::saltwater_parser::lex::PreProcessorBuilder;
     use self::saltwater_parser::PreProcessor;
+    use self::saltwater_parser::lex::PreProcessorBuilder;
 
     /// Create a new preprocessor with `s` as the input
     pub(crate) fn cpp(s: &str) -> PreProcessor {

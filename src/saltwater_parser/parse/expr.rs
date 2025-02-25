@@ -194,36 +194,43 @@ impl<I: Lexer> Parser<I> {
         let mut prefixes = Vec::new();
         // hack: `sizeof` can be either a unary or primary expression, so we special-case it
         let mut inner = loop {
-            match self.match_prefix_operator()
-            { Some(Locatable {
-                data: constructor,
-                location,
-            }) => {
-                prefixes.push((constructor, location));
-            // these keywords can be followed by either a type name or an expression
-            } _ => if let Some(keyword) = self.match_keywords(&[Keyword::Sizeof, Keyword::Alignof]) {
-                // `sizeof(int)` is a primary expr
-                match self.parenthesized_type()? { Some(mut ctype) => {
-                    ctype.location = keyword.location.merge(ctype.location);
-                    let constructor = if keyword.data == Keyword::Sizeof {
-                        ExprType::SizeofType
+            match self.match_prefix_operator() {
+                Some(Locatable {
+                    data: constructor,
+                    location,
+                }) => {
+                    prefixes.push((constructor, location));
+                    // these keywords can be followed by either a type name or an expression
+                }
+                _ => {
+                    if let Some(keyword) = self.match_keywords(&[Keyword::Sizeof, Keyword::Alignof]) {
+                        // `sizeof(int)` is a primary expr
+                        match self.parenthesized_type()? {
+                            Some(mut ctype) => {
+                                ctype.location = keyword.location.merge(ctype.location);
+                                let constructor = if keyword.data == Keyword::Sizeof {
+                                    ExprType::SizeofType
+                                } else {
+                                    ExprType::AlignofType
+                                };
+                                // short-circuit here
+                                break self.postfix_expr(ctype.map(constructor))?;
+                                // `sizeof +1` is a unary expr
+                            }
+                            _ => {
+                                let constructor = if keyword.data == Keyword::Sizeof {
+                                    ExprType::SizeofExpr
+                                } else {
+                                    ExprType::AlignofExpr
+                                };
+                                prefixes.push((Box::new(move |a| constructor(Box::new(a))), keyword.location));
+                            }
+                        }
                     } else {
-                        ExprType::AlignofType
-                    };
-                    // short-circuit here
-                    break self.postfix_expr(ctype.map(constructor))?;
-                // `sizeof +1` is a unary expr
-                } _ => {
-                    let constructor = if keyword.data == Keyword::Sizeof {
-                        ExprType::SizeofExpr
-                    } else {
-                        ExprType::AlignofExpr
-                    };
-                    prefixes.push((Box::new(move |a| constructor(Box::new(a))), keyword.location));
-                }}
-            } else {
-                break self.primary_expr()?;
-            }}
+                        break self.primary_expr()?;
+                    }
+                }
+            }
         };
         while let Some((constructor, location)) = prefixes.pop() {
             inner = Locatable::new(constructor(inner), location);
@@ -239,25 +246,35 @@ impl<I: Lexer> Parser<I> {
     fn primary_expr(&mut self) -> SyntaxResult<Expr> {
         // primary expression
         // this must be an expression since we already consumed all the prefix expressions
-        let primary = match self.match_next(&Token::LeftParen) { Some(paren) => {
-            // take out lots of guards since there's a lot of indirection
-            let _guard = self.recursion_check();
-            let _guard2 = self.recursion_check();
-            let mut inner = self.expr()?;
-            let end_loc = self.expect(Token::RightParen)?.location;
-            inner.location = paren.location.merge(end_loc);
-            inner
-        } _ => if let Some(loc) = self.match_id() {
-            loc.map(ExprType::Id)
-        } else { match self.match_literal() { Some(literal) => {
-            let loc = literal.location;
-            match literal.data.parse() {
-                Ok(literal) => loc.with(literal).map(ExprType::Literal),
-                Err(err) => return Err(loc.with(err)),
+        let primary = match self.match_next(&Token::LeftParen) {
+            Some(paren) => {
+                // take out lots of guards since there's a lot of indirection
+                let _guard = self.recursion_check();
+                let _guard2 = self.recursion_check();
+                let mut inner = self.expr()?;
+                let end_loc = self.expect(Token::RightParen)?.location;
+                inner.location = paren.location.merge(end_loc);
+                inner
             }
-        } _ => {
-            return Err(self.next_location().with(SyntaxError::MissingPrimary));
-        }}}};
+            _ => {
+                if let Some(loc) = self.match_id() {
+                    loc.map(ExprType::Id)
+                } else {
+                    match self.match_literal() {
+                        Some(literal) => {
+                            let loc = literal.location;
+                            match literal.data.parse() {
+                                Ok(literal) => loc.with(literal).map(ExprType::Literal),
+                                Err(err) => return Err(loc.with(err)),
+                            }
+                        }
+                        _ => {
+                            return Err(self.next_location().with(SyntaxError::MissingPrimary));
+                        }
+                    }
+                }
+            }
+        };
         self.postfix_expr(primary)
     }
 
@@ -334,23 +351,29 @@ impl<I: Lexer> Parser<I> {
             Some(Token::LeftParen) => {
                 let mut start = next_location(self);
                 let mut args = Vec::new();
-                match self.match_next(&Token::RightParen) { Some(token) => {
-                    start = start.merge(token.location);
-                } _ => {
-                    loop {
-                        // TODO: maybe we could do some error handling here and consume the end right paren
-                        let arg = self.ternary_expr()?;
-                        start.merge(arg.location);
-                        args.push(arg);
-                        match self.match_next(&Token::Comma) { Some(token) => {
-                            start.merge(token.location);
-                        } _ => {
-                            let token = self.expect(Token::RightParen)?;
-                            start = start.merge(token.location);
-                            break;
-                        }}
+                match self.match_next(&Token::RightParen) {
+                    Some(token) => {
+                        start = start.merge(token.location);
                     }
-                }};
+                    _ => {
+                        loop {
+                            // TODO: maybe we could do some error handling here and consume the end right paren
+                            let arg = self.ternary_expr()?;
+                            start.merge(arg.location);
+                            args.push(arg);
+                            match self.match_next(&Token::Comma) {
+                                Some(token) => {
+                                    start.merge(token.location);
+                                }
+                                _ => {
+                                    let token = self.expect(Token::RightParen)?;
+                                    start = start.merge(token.location);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                };
                 (Box::new(move |expr| ExprType::FuncCall(expr, args)), start)
             }
             _ => return Ok(None),

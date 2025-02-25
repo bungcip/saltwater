@@ -257,11 +257,7 @@ impl Lexer {
                 }
             };
         }
-        if !saw_digit {
-            Ok(None)
-        } else {
-            Ok(Some(()))
-        }
+        if !saw_digit { Ok(None) } else { Ok(Some(())) }
     }
     fn parse_char(&mut self) -> Result<Token, LexError> {
         let start = self.get_location().offset - '\''.len_utf8() as u32;

@@ -256,8 +256,8 @@ fn fold_binary(
     parent_type: &Type,
     location: Location,
 ) -> CompileResult<ExprType> {
-    use lex::ComparisonToken::*;
     use BinaryOp::*;
+    use lex::ComparisonToken::*;
 
     let left = left.const_fold()?;
     let right = right.const_fold()?;

@@ -573,7 +573,7 @@ impl Eq for Symbol {}
 
 #[cfg(test)]
 mod tests {
-    use crate::saltwater_parser::analyze::{test::analyze, PureAnalyzer};
+    use crate::saltwater_parser::analyze::{PureAnalyzer, test::analyze};
     use crate::saltwater_parser::{Locatable, Parser};
 
     #[test]

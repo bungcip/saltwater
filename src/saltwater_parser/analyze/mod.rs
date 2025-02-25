@@ -7,10 +7,10 @@ use std::convert::TryInto;
 
 use counter::Counter;
 
+use crate::saltwater_parser::RecursionGuard;
 use crate::saltwater_parser::data::{error::Warning, hir::*, lex::Keyword, *};
 use crate::saltwater_parser::intern::InternedStr;
 use crate::saltwater_parser::parse::{Lexer, Parser};
-use crate::saltwater_parser::RecursionGuard;
 
 pub(crate) type TagScope = Scope<InternedStr, TagEntry>;
 
@@ -80,16 +80,21 @@ impl<T: Lexer> Iterator for Analyzer<T> {
             // Instead of returning `SemanticResult`, the analyzer puts all errors into `error_handler`.
             // This simplifies the logic in `next` greatly.
             // NOTE: this returns errors for a declaration before the declaration itself
-            match self.inner.error_handler.pop_front() { Some(err) => {
-                return Some(Err(err));
-            // If we saw `int i, j, k;`, we treated those as different declarations
-            // `j, k` will be stored into `pending`
-            } _ => { match self.inner.pending.pop_front() { Some(decl) => {
-                if self.debug {
-                    println!("hir: {}", decl.data);
+            match self.inner.error_handler.pop_front() {
+                Some(err) => {
+                    return Some(Err(err));
+                    // If we saw `int i, j, k;`, we treated those as different declarations
+                    // `j, k` will be stored into `pending`
                 }
-                return Some(Ok(decl));
-            } _ => {}}}}
+                None => {
+                    if let Some(decl) = self.inner.pending.pop_front() {
+                        if self.debug {
+                            println!("hir: {}", decl.data);
+                        }
+                        return Some(Ok(decl));
+                    }
+                }
+            }
             // Now do the real work.
             let next = match self.declarations.next()? {
                 Err(err) => return Some(Err(err)),
@@ -1520,20 +1525,22 @@ pub(crate) mod test {
             Pointer(
                 Box::new(Function(FunctionType {
                     return_type: Box::new(Int(true)),
-                    params: vec![Variable {
-                        id: InternedStr::get_or_intern("f"),
-                        ctype: Pointer(
-                            Box::new(Function(FunctionType {
-                                return_type: Box::new(Int(true)),
-                                params: vec![],
-                                varargs: false
-                            })),
-                            Qualifiers::default()
-                        ),
-                        qualifiers: Default::default(),
-                        storage_class: Default::default(),
-                    }
-                    .insert()],
+                    params: vec![
+                        Variable {
+                            id: InternedStr::get_or_intern("f"),
+                            ctype: Pointer(
+                                Box::new(Function(FunctionType {
+                                    return_type: Box::new(Int(true)),
+                                    params: vec![],
+                                    varargs: false
+                                })),
+                                Qualifiers::default()
+                            ),
+                            qualifiers: Default::default(),
+                            storage_class: Default::default(),
+                        }
+                        .insert()
+                    ],
                     varargs: false,
                 })),
                 Qualifiers::default()
@@ -1543,13 +1550,15 @@ pub(crate) mod test {
             decl("int f(int, ...);"),
             Function(FunctionType {
                 return_type: Box::new(Int(true)),
-                params: vec![Variable {
-                    id: Default::default(),
-                    ctype: Int(true),
-                    qualifiers: Default::default(),
-                    storage_class: Default::default()
-                }
-                .insert()],
+                params: vec![
+                    Variable {
+                        id: Default::default(),
+                        ctype: Int(true),
+                        qualifiers: Default::default(),
+                        storage_class: Default::default()
+                    }
+                    .insert()
+                ],
                 varargs: true,
             })
         ));
@@ -1560,13 +1569,15 @@ pub(crate) mod test {
             decl("void f(int a[static 5]);"),
             Function(FunctionType {
                 return_type: Box::new(Void),
-                params: vec![Variable {
-                    id: InternedStr::get_or_intern("a"),
-                    ctype: Pointer(Box::new(Int(true)), Qualifiers::default()),
-                    qualifiers: Default::default(),
-                    storage_class: Default::default(),
-                }
-                .insert()],
+                params: vec![
+                    Variable {
+                        id: InternedStr::get_or_intern("a"),
+                        ctype: Pointer(Box::new(Int(true)), Qualifiers::default()),
+                        qualifiers: Default::default(),
+                        storage_class: Default::default(),
+                    }
+                    .insert()
+                ],
                 varargs: false
             })
         ));
@@ -1580,13 +1591,15 @@ pub(crate) mod test {
             decl("inline void f(void);"),
             Function(FunctionType {
                 return_type: Box::new(Void),
-                params: vec![Variable {
-                    id: InternedStr::default(),
-                    ctype: Type::Void,
-                    qualifiers: Qualifiers::default(),
-                    storage_class: StorageClass::default(),
-                }
-                .insert()],
+                params: vec![
+                    Variable {
+                        id: InternedStr::default(),
+                        ctype: Type::Void,
+                        qualifiers: Qualifiers::default(),
+                        storage_class: StorageClass::default(),
+                    }
+                    .insert()
+                ],
                 varargs: false,
             })
         ));
@@ -1617,13 +1630,15 @@ pub(crate) mod test {
                                     ..Qualifiers::default()
                                 }
                             )),
-                            params: vec![Variable {
-                                ctype: Int(true),
-                                storage_class: Default::default(),
-                                id: Default::default(),
-                                qualifiers: Qualifiers::NONE,
-                            }
-                            .insert()],
+                            params: vec![
+                                Variable {
+                                    ctype: Int(true),
+                                    storage_class: Default::default(),
+                                    id: Default::default(),
+                                    qualifiers: Qualifiers::NONE,
+                                }
+                                .insert()
+                            ],
                             varargs: false,
                         })),
                         Qualifiers::default()
@@ -1645,13 +1660,15 @@ pub(crate) mod test {
                         Box::new(Array(Box::new(Int(true)), ArrayType::Unbounded)),
                         Qualifiers::default()
                     )),
-                    params: vec![Variable {
-                        ctype: Void,
-                        storage_class: Default::default(),
-                        id: Default::default(),
-                        qualifiers: Default::default(),
-                    }
-                    .insert()],
+                    params: vec![
+                        Variable {
+                            ctype: Void,
+                            storage_class: Default::default(),
+                            id: Default::default(),
+                            qualifiers: Default::default(),
+                        }
+                        .insert()
+                    ],
                     varargs: false,
                 })),
                 Qualifiers::default()

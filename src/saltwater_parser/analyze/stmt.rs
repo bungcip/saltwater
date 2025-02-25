@@ -1,5 +1,5 @@
 use super::FunctionAnalyzer;
-use crate::saltwater_parser::data::{ast, error::SemanticError, hir::*, lex::Locatable, Location};
+use crate::saltwater_parser::data::{Location, ast, error::SemanticError, hir::*, lex::Locatable};
 
 impl FunctionAnalyzer<'_> {
     #[inline(always)]
@@ -7,8 +7,8 @@ impl FunctionAnalyzer<'_> {
         self.analyzer.expr(expr)
     }
     pub(crate) fn parse_stmt(&mut self, stmt: ast::Stmt) -> Stmt {
-        use ast::StmtType::*;
         use StmtType as S;
+        use ast::StmtType::*;
 
         // ugh so much boilerplate
         let data = match stmt.data {
@@ -162,11 +162,11 @@ impl FunctionAnalyzer<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::saltwater_parser::analyze::test::{analyze, analyze_expr};
-    use crate::saltwater_parser::analyze::FunctionData;
-    use crate::saltwater_parser::data::*;
     use crate::saltwater_parser::Location;
     use crate::saltwater_parser::Parser;
+    use crate::saltwater_parser::analyze::FunctionData;
+    use crate::saltwater_parser::analyze::test::{analyze, analyze_expr};
+    use crate::saltwater_parser::data::*;
 
     fn parse_stmt(stmt: &str) -> CompileResult<Stmt> {
         analyze(stmt, Parser::statement, |a, stmt| {

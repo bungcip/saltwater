@@ -25,10 +25,10 @@ use codegen::ir::UserFuncName;
 use cranelift::codegen::{
     self,
     ir::{
+        InstBuilder,
         entities::StackSlot,
         function::Function,
         stackslot::{StackSlotData, StackSlotKind},
-        InstBuilder,
     },
     isa::TargetIsa,
     settings::{self, Configurable, Flags},
@@ -39,9 +39,10 @@ use cranelift_module::{self, DataId, FuncId, Linkage, Module};
 use cranelift_object::{ObjectBuilder, ObjectModule};
 
 use crate::saltwater_parser::data::{
+    StorageClass,
     hir::{Declaration, Initializer, Stmt, Symbol},
     types::FunctionType,
-    StorageClass, *,
+    *,
 };
 
 pub(crate) fn get_isa() -> Arc<dyn TargetIsa + 'static> {
@@ -179,7 +180,7 @@ impl Compiler {
                 return Err(CompileError::semantic(Locatable {
                     data: err.into(),
                     location,
-                }))
+                }));
             }
         };
         let kind = StackSlotKind::ExplicitSlot;
@@ -189,7 +190,7 @@ impl Compiler {
                 return Err(CompileError::semantic(Locatable {
                     data: "cannot store items on the stack that are more than 4 GB, it will overflow the stack".into(),
                     location,
-                }))
+                }));
             }
         };
         let data = StackSlotData::new(kind, size, 0);
@@ -352,7 +353,7 @@ pub fn compile(module: ObjectModule, buf: &str, opt: Opt) -> Program<ObjectModul
                 result: Err(err),
                 warnings: program.warnings,
                 files: program.files,
-            }
+            };
         }
     };
     // really we'd like to have all errors but that requires a refactor
@@ -385,11 +386,10 @@ pub fn compile(module: ObjectModule, buf: &str, opt: Opt) -> Program<ObjectModul
         }
     }
     let warns = compiler.error_handler.warnings;
-    let (result, ir_warnings) = match err { Some(err) => {
-        (Err(err), warns)
-    } _ => {
-        (Ok(compiler.module), warns)
-    }};
+    let (result, ir_warnings) = match err {
+        Some(err) => (Err(err), warns),
+        _ => (Ok(compiler.module), warns),
+    };
     program.warnings.extend(ir_warnings);
     Program {
         result: result.map_err(|errs| vec_deque![errs]),

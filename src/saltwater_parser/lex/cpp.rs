@@ -32,13 +32,13 @@ use std::convert::TryFrom;
 use std::path::{Path, PathBuf};
 
 use super::files::FileProcessor;
-use super::replace::{replace, replace_iter, Definition, Definitions};
+use super::replace::{Definition, Definitions, replace, replace_iter};
 use super::{Lexer, LiteralParser, Token};
+use crate::saltwater_parser::Files;
 use crate::saltwater_parser::arch::TARGET;
 use crate::saltwater_parser::data::error::CppError;
 use crate::saltwater_parser::data::lex::{Keyword, LiteralToken};
 use crate::saltwater_parser::data::*;
-use crate::saltwater_parser::Files;
 
 /// An easier interface for constructing a preprocessor.
 ///
@@ -219,29 +219,35 @@ impl Iterator for PreProcessor<'_> {
         // Second, the current token could be an identifier that was `#define`d to an empty token list.
         // This loop is for the second case, not the first.
         loop {
-            let replacement = match self.error_handler.pop_front() { Some(err) => {
-                return Some(Err(err));
-            } _ => { match self.pending.pop_front() { Some(token) => {
-                self.handle_token(token.data, token.location)
-            } _ => {
-                // This function does not perform macro replacement,
-                // so if it returns None we got to EOF.
-                match self.next_cpp_token()? {
-                    Err(err) => return Some(Err(err)),
-                    Ok(loc) => match loc.data {
-                        CppToken::Directive(directive) => {
-                            let start = loc.location.span.start;
-                            match self.directive(directive, start) {
+            let replacement = match self.error_handler.pop_front() {
+                Some(err) => {
+                    return Some(Err(err));
+                }
+                _ => {
+                    match self.pending.pop_front() {
+                        Some(token) => self.handle_token(token.data, token.location),
+                        _ => {
+                            // This function does not perform macro replacement,
+                            // so if it returns None we got to EOF.
+                            match self.next_cpp_token()? {
                                 Err(err) => return Some(Err(err)),
-                                Ok(()) => continue,
+                                Ok(loc) => match loc.data {
+                                    CppToken::Directive(directive) => {
+                                        let start = loc.location.span.start;
+                                        match self.directive(directive, start) {
+                                            Err(err) => return Some(Err(err)),
+                                            Ok(()) => continue,
+                                        }
+                                    }
+                                    CppToken::Token(token) => {
+                                        self.handle_token(PendingToken::NeedsReplacement(token), loc.location)
+                                    }
+                                },
                             }
                         }
-                        CppToken::Token(token) => {
-                            self.handle_token(PendingToken::NeedsReplacement(token), loc.location)
-                        }
-                    },
+                    }
                 }
-            }}}};
+            };
             if let Some(token) = replacement {
                 return Some(token);
             }
@@ -292,7 +298,6 @@ impl<'a> PreProcessor<'a> {
                     .read()
                     .expect("failed to lock String cache for reading");
                 let tmp = strings.resolve(&name.0);
-    
 
                 if let Some(keyword) = KEYWORDS.get(tmp) {
                     *data = Token::Keyword(*keyword);
@@ -455,7 +460,7 @@ impl<'a> PreProcessor<'a> {
         } else {
             next_token.map(Locatable::from)
         })
-    }    // this function does _not_ perform macro substitution
+    } // this function does _not_ perform macro substitution
     fn expect_id(&mut self) -> CppResult<InternedStr> {
         let location = self.file_processor.span(self.file_processor.offset());
         match self.file_processor.next() {
@@ -706,7 +711,7 @@ impl<'a> PreProcessor<'a> {
             return Err(CompileError::new(CppError::EmptyExpression.into(), location));
         }
         // TODO: this only returns the first error because anything else requires a refactor
-        use crate::saltwater_parser::{analyze::PureAnalyzer, Parser};
+        use crate::saltwater_parser::{Parser, analyze::PureAnalyzer};
         let mut parser = Parser::new(cpp_tokens.into_iter(), false);
         let expr = parser.expr()?;
         if !parser.is_empty() {
@@ -845,7 +850,7 @@ impl<'a> PreProcessor<'a> {
                     return Err(CompileError::new(
                         CppError::EndOfFile("identifier or ')'").into(),
                         self.lexer().span(start),
-                    ))
+                    ));
                 }
                 Some(Err(err)) => return Err(err),
                 Some(Ok(other)) => self
@@ -936,13 +941,13 @@ impl<'a> PreProcessor<'a> {
                     return Err(CompileError::new(
                         CppError::UnexpectedToken("include file", other.data).into(),
                         other.location,
-                    ))
+                    ));
                 }
                 None => {
                     return Err(CompileError::new(
                         CppError::EndOfFile("include file").into(),
                         self.span(start),
-                    ))
+                    ));
                 }
             };
             self.update_builtin_definitions();
@@ -965,13 +970,13 @@ impl<'a> PreProcessor<'a> {
                     return Err(CompileError::new(
                         CppError::UnexpectedToken("include file", other.data).into(),
                         other.location,
-                    ))
+                    ));
                 }
                 None => {
                     return Err(CompileError::new(
                         CppError::EndOfFile("include file").into(),
                         self.span(start),
-                    ))
+                    ));
                 }
             }
         };
@@ -1814,16 +1819,19 @@ h",
         let filename = "helloworld.c";
         let mut cpp = PreProcessorBuilder::new("__FILE__").filename(filename).build();
         let token = cpp.next_non_whitespace().unwrap().unwrap().data;
-        match token { Token::Literal(LiteralToken::Str(rcstrs)) => {
-            assert_eq!(rcstrs.first().unwrap().as_str(), format!("\"{}\"", filename));
-        } _ => {
-            panic!();
-        }}
+        match token {
+            Token::Literal(LiteralToken::Str(rcstrs)) => {
+                assert_eq!(rcstrs.first().unwrap().as_str(), format!("\"{}\"", filename));
+            }
+            _ => {
+                panic!();
+            }
+        }
     }
     #[test]
     fn builtins_date_time() {
-        use time::macros::format_description;
         use time::OffsetDateTime;
+        use time::macros::format_description;
 
         fn assert_same_datetime(src: &str, cpp_src: &str, datetime: OffsetDateTime) {
             let date_format = format_description!("[month repr:short] [day padding:space] [year]");

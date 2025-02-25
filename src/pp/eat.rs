@@ -25,7 +25,7 @@ pub trait Eat: Iterator + Clone {
     {
         let mut speculative = self.clone();
         for x in needle {
-            if speculative.next().map_or(true, |y| y != x) {
+            if speculative.next().is_none_or(|y| y != x) {
                 return false;
             }
         }

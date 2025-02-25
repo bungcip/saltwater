@@ -447,8 +447,8 @@ fn fatal<T: std::fmt::Display>(msg: T, code: i32, color: ColorChoice) -> ! {
 #[cfg(feature = "color-backtrace")]
 mod backtrace {
     use super::ColorChoice;
-    use color_backtrace::termcolor::{self, StandardStream};
     use color_backtrace::BacktracePrinter;
+    use color_backtrace::termcolor::{self, StandardStream};
 
     impl From<ColorChoice> for termcolor::ColorChoice {
         fn from(val: ColorChoice) -> Self {

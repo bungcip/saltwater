@@ -4,11 +4,11 @@ use std::cmp::max;
 
 use target_lexicon::Triple;
 
+use crate::saltwater_parser::Type::*;
 use crate::saltwater_parser::data::{
     types::{ArrayType, StructType},
     *,
 };
-use crate::saltwater_parser::Type::*;
 
 /// Size of a `char` in bytes
 ///
@@ -157,10 +157,10 @@ mod tests {
     use proptest::prelude::*;
 
     use crate::saltwater_parser::data::{
+        StorageClass,
         hir::Qualifiers,
         hir::Variable,
-        types::{tests::arb_type, StructType, Type},
-        StorageClass,
+        types::{StructType, Type, tests::arb_type},
     };
 
     use super::*;

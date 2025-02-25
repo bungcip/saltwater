@@ -286,8 +286,8 @@ pub(super) fn print_type(ctype: &Type, name: Option<InternedStr>, f: &mut Format
         types
     }
 
-    use std::fmt::Write;
     use Type::*;
+    use std::fmt::Write;
 
     let unrolled_type = unroll_type(ctype);
 

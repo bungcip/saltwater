@@ -290,8 +290,8 @@ fn test_characters() {
 
     // catch overflow in hex escapes
     use crate::saltwater_parser::data::{
-        error::{Error, LexError},
         Radix,
+        error::{Error, LexError},
     };
     let assert_overflow = |c| match lex(c).unwrap().unwrap_err().data {
         Error::Lex(LexError::CharEscapeOutOfRange(Radix::Hexadecimal)) => {}
@@ -324,11 +324,13 @@ fn test_location() {
 // Integration tests
 #[test]
 fn test_for_loop() {
-    assert!(lex_all(
-        "for (int i = 0; i < 100; ++i {
+    assert!(
+        lex_all(
+            "for (int i = 0; i < 100; ++i {
         a[i] = i << 2 + i*4;
         }"
+        )
+        .into_iter()
+        .all(|x| x.is_ok())
     )
-    .into_iter()
-    .all(|x| x.is_ok()))
 }

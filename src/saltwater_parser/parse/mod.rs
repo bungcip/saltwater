@@ -6,9 +6,9 @@ use std::collections::VecDeque;
 use std::iter::Iterator;
 use std::mem;
 
+use crate::saltwater_parser::RecursionGuard;
 use crate::saltwater_parser::data::*;
 use crate::saltwater_parser::data::{ast::ExternalDeclaration, hir::Scope, lex::Keyword};
-use crate::saltwater_parser::RecursionGuard;
 
 use super::CompileResult;
 
@@ -96,14 +96,19 @@ impl<I: Lexer> Iterator for Parser<I> {
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             // check for pending changes from the last declaration
-            match self.error_handler.pop_front() { Some(err) => {
-                return Some(Err(err));
-            } _ => if let Some(decl) = self.pending.pop_front() {
-                if self.debug {
-                    println!("ast: {}", decl.data);
+            match self.error_handler.pop_front() {
+                Some(err) => {
+                    return Some(Err(err));
                 }
-                return Some(Ok(decl));
-            }}
+                _ => {
+                    if let Some(decl) = self.pending.pop_front() {
+                        if self.debug {
+                            println!("ast: {}", decl.data);
+                        }
+                        return Some(Ok(decl));
+                    }
+                }
+            }
 
             // Check for end of file
             if self.peek_token().is_none() {
@@ -217,11 +222,10 @@ impl<I: Lexer> Parser<I> {
         self.next.as_ref().map(|x| &x.data)
     }
     fn next_location(&self) -> Location {
-        match &self.current { Some(token) => {
-            token.location
-        } _ => {
-            self.last_location
-        }}
+        match &self.current {
+            Some(token) => token.location,
+            _ => self.last_location,
+        }
     }
     fn match_id(&mut self) -> Option<Locatable<InternedStr>> {
         match self.peek_token() {
@@ -247,16 +251,16 @@ impl<I: Lexer> Parser<I> {
     }
     fn match_literal(&mut self) -> Option<Locatable<LiteralToken>> {
         let next = self.next_token();
-        match next
-        { Some(Locatable {
-            data: Token::Literal(lit),
-            location,
-        }) => {
-            Some(location.with(lit))
-        } _ => {
-            self.unput(next);
-            None
-        }}
+        match next {
+            Some(Locatable {
+                data: Token::Literal(lit),
+                location,
+            }) => Some(location.with(lit)),
+            _ => {
+                self.unput(next);
+                None
+            }
+        }
     }
     fn match_next(&mut self, next: &Token) -> Option<Locatable<Token>> {
         self.match_any(&[next])
