@@ -54,7 +54,7 @@ impl FileProcessor {
             code: ArcStr::clone(&chars),
             path: filename.clone().into(),
         };
-        let file = files.add(filename, source);
+        let file = files.add(filename.to_string_lossy().into_owned(), source);
         Self {
             error_handler: ErrorHandler::default(),
             first_lexer: Lexer::new(file, chars, debug),
@@ -82,7 +82,7 @@ impl FileProcessor {
     }
     pub(super) fn add_file(&mut self, filename: PathBuf, source: Source) {
         let code = ArcStr::clone(&source.code);
-        let id = self.files.add(filename, source);
+        let id = self.files.add(filename.to_string_lossy().into_owned(), source);
         self.includes.push(Lexer::new(id, code, self.first_lexer.debug));
     }
 

@@ -35,7 +35,7 @@ target-lexicon = "0.13"
 hexponent = "0.3"
 thiserror = "^2.0"
 lasso = "0.7"
-codespan = { version = "0.11", default-features = false }
+codespan = { version = "0.12", default-features = false }
 counter = "0.6"
 shared_str = "0.1.1"
 time = {version="0.3", features = ["local-offset", "macros", "formatting", "std"]}
