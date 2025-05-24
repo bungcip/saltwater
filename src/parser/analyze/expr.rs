@@ -1,7 +1,7 @@
 use super::PureAnalyzer;
-use crate::saltwater_parser::arch;
-use crate::saltwater_parser::data::{hir::*, lex::ComparisonToken, *};
-use crate::saltwater_parser::intern::InternedStr;
+use crate::parser::arch;
+use crate::parser::data::{hir::*, lex::ComparisonToken, *};
+use crate::parser::intern::InternedStr;
 
 impl PureAnalyzer {
     pub(crate) fn expr(&mut self, expr: ast::Expr) -> Expr {
@@ -547,7 +547,7 @@ impl PureAnalyzer {
     // ++i, i--
     // 6.5.2.4 Postfix increment and decrement operators
     fn increment_op(&mut self, prefix: bool, increment: bool, expr: ast::Expr, location: Location) -> Expr {
-        use crate::saltwater_parser::data::lex::AssignmentToken;
+        use crate::parser::data::lex::AssignmentToken;
 
         let expr = self.expr(expr);
         if let Err(err) = expr.modifiable_lval() {
@@ -843,7 +843,7 @@ impl PureAnalyzer {
 
 // literal
 pub(super) fn literal(literal: LiteralValue, location: Location) -> Expr {
-    use crate::saltwater_parser::data::types::ArrayType;
+    use crate::parser::data::types::ArrayType;
 
     let ctype = match &literal {
         LiteralValue::Char(_) => Type::Char(true),
@@ -1267,8 +1267,8 @@ impl Qualifiers {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::saltwater_parser::analyze::test::analyze;
-    use crate::saltwater_parser::analyze::*;
+    use crate::parser::analyze::test::analyze;
+    use crate::parser::analyze::*;
     pub(crate) fn expr(input: &str) -> CompileResult<Expr> {
         analyze(input, Parser::expr, PureAnalyzer::expr)
     }

@@ -1,7 +1,7 @@
 use super::{Lexer, LiteralParser};
-use crate::saltwater_parser::data::{CompileResult, Locatable, Token};
-use crate::saltwater_parser::{ErrorHandler, Location};
-use crate::saltwater_parser::{Files, Source};
+use crate::parser::data::{CompileResult, Locatable, Token};
+use crate::parser::{ErrorHandler, Location};
+use crate::parser::{Files, Source};
 use arcstr::ArcStr;
 use std::path::{Path, PathBuf};
 
@@ -50,7 +50,7 @@ impl FileProcessor {
         let mut files = Files::new();
         let chars = chars.into();
         let filename = filename.into();
-        let source = crate::saltwater_parser::Source {
+        let source = crate::parser::Source {
             code: ArcStr::clone(&chars),
             path: filename.clone().into(),
         };

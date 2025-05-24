@@ -4,8 +4,8 @@ use std::cmp::Ordering;
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
-use crate::saltwater_parser::data::hir::BinaryOp;
-use crate::saltwater_parser::intern::InternedStr;
+use crate::parser::data::hir::BinaryOp;
+use crate::parser::intern::InternedStr;
 
 use arcstr::Substr;
 
@@ -318,7 +318,7 @@ impl AssignmentToken {
 
 impl Default for Location {
     fn default() -> Self {
-        let mut files = crate::saltwater_parser::Files::default();
+        let mut files = crate::parser::Files::default();
         let id = files.add("<default location>", String::new().into());
         Self {
             span: (0..1).into(),
@@ -485,8 +485,8 @@ mod proptest_impl {
 pub(crate) mod test {
     use crate::*;
 
-    use self::saltwater_parser::PreProcessor;
-    use self::saltwater_parser::lex::PreProcessorBuilder;
+    use self::parser::PreProcessor;
+    use self::parser::lex::PreProcessorBuilder;
 
     /// Create a new preprocessor with `s` as the input
     pub(crate) fn cpp(s: &str) -> PreProcessor {

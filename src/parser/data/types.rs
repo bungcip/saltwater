@@ -1,5 +1,5 @@
 use super::hir::{Symbol, Variable};
-use crate::saltwater_parser::intern::InternedStr;
+use crate::parser::intern::InternedStr;
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 use std::fmt::{self, Formatter};
@@ -57,7 +57,7 @@ mod struct_ref {
         ///
         /// Examples:
         /// ```
-        /// use saltwater::saltwater_parser::data::types::StructRef;
+        /// use saltwater::parser::data::types::StructRef;
         /// let struct_ref = StructRef::new();
         /// let members = struct_ref.get();
         /// for symbol in members.iter() {
@@ -79,7 +79,7 @@ mod struct_ref {
         /// Examples:
         ///
         /// ```compile_fail
-        /// use saltwater::saltwater_parser::data::types::StructRef;
+        /// use saltwater::parser::data::types::StructRef;
         /// let struct_ref = StructRef::new();
         /// struct_ref.update(vec![Symbol::new()]);
         /// ```
@@ -411,7 +411,7 @@ pub(crate) mod tests {
     use proptest::prelude::*;
 
     use super::{ArrayType, InternedStr, Type};
-    use crate::saltwater_parser::data::hir::Qualifiers;
+    use crate::parser::data::hir::Qualifiers;
 
     pub(crate) fn arb_type() -> impl Strategy<Value = Type> {
         let leaf = prop_oneof![
@@ -441,7 +441,7 @@ pub(crate) mod tests {
         })
     }
 
-    use crate::saltwater_parser::analyze::test::{assert_decl_display, assert_no_change};
+    use crate::parser::analyze::test::{assert_decl_display, assert_no_change};
 
     #[test]
     fn test_big_one() {

@@ -3,7 +3,7 @@ use cranelift::frontend::Switch;
 use cranelift::prelude::{Block, FunctionBuilder, InstBuilder};
 
 use super::{BlockState, Compiler};
-use crate::saltwater_parser::data::{
+use crate::parser::data::{
     hir::{Expr, Stmt, StmtType},
     *,
 };

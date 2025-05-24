@@ -1,9 +1,9 @@
 use super::*;
-use crate::saltwater_parser::data::ast::{
+use crate::parser::data::ast::{
     self, Declaration, DeclarationSpecifier, Declarator, Expr, ExternalDeclaration, Initializer, TypeName,
 };
-use crate::saltwater_parser::data::error::Warning;
-use crate::saltwater_parser::data::*;
+use crate::parser::data::error::Warning;
+use crate::parser::data::*;
 use std::convert::{TryFrom, TryInto};
 
 #[derive(Debug)]
@@ -50,7 +50,7 @@ impl<I: Lexer> Parser<I> {
         let declarator = self.init_declarator()?;
         let mut location = declarator.location.maybe_merge(specifier_locations);
         if self.peek_token() == Some(&Token::LeftBrace) {
-            use crate::saltwater_parser::data::ast::{DeclaratorType, FunctionDefinition};
+            use crate::parser::data::ast::{DeclaratorType, FunctionDefinition};
 
             // int i = 1 {}
             let func = match declarator.data.declarator.decl {
@@ -78,7 +78,7 @@ impl<I: Lexer> Parser<I> {
         let mut decls = vec![declarator];
         let has_typedef = specifiers
             .iter()
-            .any(|s| *s == DeclarationSpecifier::Unit(crate::saltwater_parser::data::ast::UnitSpecifier::Typedef));
+            .any(|s| *s == DeclarationSpecifier::Unit(crate::parser::data::ast::UnitSpecifier::Typedef));
         while self.match_next(&Token::Semicolon).is_none() {
             self.expect(Token::Comma)?;
             let decl = self.init_declarator()?;
@@ -98,7 +98,7 @@ impl<I: Lexer> Parser<I> {
         Ok(Locatable::new(ExternalDeclaration::Declaration(declaration), location))
     }
     pub(crate) fn type_name(&mut self) -> SyntaxResult<Locatable<TypeName>> {
-        use crate::saltwater_parser::ast::DeclaratorType;
+        use crate::parser::ast::DeclaratorType;
 
         let (specifiers, specifier_locations) = self.specifiers()?;
         let maybe_declarator = self.declarator(true)?;
@@ -172,7 +172,7 @@ impl<I: Lexer> Parser<I> {
         is_struct: bool,
         mut start: Location,
     ) -> SyntaxResult<Locatable<DeclarationSpecifier>> {
-        use crate::saltwater_parser::data::ast::StructSpecifier;
+        use crate::parser::data::ast::StructSpecifier;
 
         let name = self.match_id().map(|id| {
             start = start.merge(id.location);
@@ -643,7 +643,7 @@ impl<I: Lexer> Parser<I> {
 
 impl InternalDeclarator {
     fn parse_declarator(self) -> Declarator {
-        use crate::saltwater_parser::data::ast::DeclaratorType;
+        use crate::parser::data::ast::DeclaratorType;
         use InternalDeclaratorType::*;
 
         let mut id = None;
@@ -714,7 +714,7 @@ impl Token {
 
 impl Keyword {
     pub(super) fn is_decl_specifier(self) -> bool {
-        use crate::saltwater_parser::data::lex::Keyword::*;
+        use crate::parser::data::lex::Keyword::*;
         match self {
             // type specifier
             Unsigned | Signed | Bool | Char | Short | Int | Long | Float | Double | Void
@@ -735,9 +735,9 @@ impl Keyword {
 
 #[cfg(test)]
 pub(crate) mod test {
-    use crate::saltwater_parser::data::ast::*;
-    use crate::saltwater_parser::data::*;
-    use crate::saltwater_parser::parse::test::*;
+    use crate::parser::data::ast::*;
+    use crate::parser::data::*;
+    use crate::parser::parse::test::*;
 
     fn decl(decl: &str) -> CompileResult<Locatable<ExternalDeclaration>> {
         let mut p = parser(decl);

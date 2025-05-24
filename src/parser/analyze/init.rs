@@ -1,7 +1,7 @@
 //! 6.7.9 Initialization
 
 use super::PureAnalyzer;
-use crate::saltwater_parser::data::{Location, Type, ast, error::SemanticError, hir::*, types};
+use crate::parser::data::{Location, Type, ast, error::SemanticError, hir::*, types};
 
 impl PureAnalyzer {
     pub(super) fn parse_initializer(
@@ -183,7 +183,7 @@ impl Type {
 mod test {
     use super::super::test::*;
     use super::*;
-    use crate::saltwater_parser::data::Locatable;
+    use crate::parser::data::Locatable;
     #[test]
     fn test_initializers() {
         // scalars

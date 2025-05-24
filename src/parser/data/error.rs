@@ -360,7 +360,7 @@ pub enum SyntaxError {
     EndOfFile(&'static str),
 
     #[error("expected statement, got {0}")]
-    NotAStatement(crate::saltwater_parser::data::lex::Keyword),
+    NotAStatement(crate::parser::data::lex::Keyword),
 
     // expected a primary expression, but got EOF or an invalid token
     #[error("expected variable, literal, or '('")]

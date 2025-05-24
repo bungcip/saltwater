@@ -1,6 +1,6 @@
 use super::{Lexer, Parser, SyntaxResult};
-use crate::saltwater_parser::data::*;
-use crate::saltwater_parser::data::{
+use crate::parser::data::*;
+use crate::parser::data::{
     ast::{CompoundStatement, Declaration, Expr, ExternalDeclaration, Stmt, StmtType},
     lex::Keyword,
 };
@@ -351,9 +351,9 @@ impl ExternalDeclaration {
 
 #[cfg(test)]
 mod tests {
-    use crate::saltwater_parser::data::ast::*;
-    use crate::saltwater_parser::data::*;
-    use crate::saltwater_parser::parse::test::*;
+    use crate::parser::data::ast::*;
+    use crate::parser::data::*;
+    use crate::parser::parse::test::*;
 
     fn stmt(stmt: &str) -> CompileResult<Stmt> {
         let mut p = parser(stmt);

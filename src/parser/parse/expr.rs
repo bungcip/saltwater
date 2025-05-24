@@ -1,9 +1,9 @@
 use std::convert::TryFrom;
 
 use super::*;
-use crate::saltwater_parser::data::ast::{Expr, ExprType, TypeName};
-use crate::saltwater_parser::data::lex::{AssignmentToken, Keyword};
-use crate::saltwater_parser::data::*;
+use crate::parser::data::ast::{Expr, ExprType, TypeName};
+use crate::parser::data::lex::{AssignmentToken, Keyword};
+use crate::parser::data::*;
 
 trait UnaryExprFn: FnOnce(Expr) -> ExprType {}
 impl<T: FnOnce(Expr) -> ExprType> UnaryExprFn for T {}
@@ -50,7 +50,7 @@ impl BinaryPrecedence {
         !matches!(self, Ternary | Assignment(_))
     }
     fn constructor(self) -> impl Fn(Expr, Expr) -> ExprType {
-        use crate::saltwater_parser::data::lex::ComparisonToken;
+        use crate::parser::data::lex::ComparisonToken;
         use BinaryPrecedence::*;
         use ExprType::*;
         let func: Box<dyn Fn(_, _) -> _> = match self {
@@ -83,7 +83,7 @@ impl BinaryPrecedence {
 impl TryFrom<&Token> for BinaryPrecedence {
     type Error = ();
     fn try_from(t: &Token) -> Result<BinaryPrecedence, ()> {
-        use crate::saltwater_parser::data::lex::ComparisonToken as Compare;
+        use crate::parser::data::lex::ComparisonToken as Compare;
         use BinaryPrecedence::{self as Bin, *};
         use Token::*;
         Ok(match t {
@@ -388,9 +388,9 @@ impl<I: Lexer> Parser<I> {
 #[cfg(test)]
 pub(crate) mod test {
     use super::SyntaxResult;
-    use crate::saltwater_parser::data::ast::{Expr, ExprType};
-    use crate::saltwater_parser::parse::test::*;
-    use crate::saltwater_parser::parse::*;
+    use crate::parser::data::ast::{Expr, ExprType};
+    use crate::parser::parse::test::*;
+    use crate::parser::parse::*;
 
     fn assert_same(left: &str, right: &str) {
         assert_eq!(expr(left).unwrap().to_string(), expr(right).unwrap().to_string());

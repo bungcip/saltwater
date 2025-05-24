@@ -33,17 +33,17 @@ use std::sync::LazyLock;
 use super::files::FileProcessor;
 use super::replace::{Definition, Definitions, replace, replace_iter};
 use super::{Lexer, LiteralParser, Token};
-use crate::saltwater_parser::Files;
-use crate::saltwater_parser::arch::TARGET;
-use crate::saltwater_parser::data::error::CppError;
-use crate::saltwater_parser::data::lex::{Keyword, LiteralToken};
-use crate::saltwater_parser::data::*;
+use crate::parser::Files;
+use crate::parser::arch::TARGET;
+use crate::parser::data::error::CppError;
+use crate::parser::data::lex::{Keyword, LiteralToken};
+use crate::parser::data::*;
 
 /// An easier interface for constructing a preprocessor.
 ///
 /// Here is the example for `PreProcessor::new()` using the builder:
 /// ```
-/// use saltwater::saltwater_parser::PreProcessorBuilder;
+/// use saltwater::parser::PreProcessorBuilder;
 ///
 /// let cpp = PreProcessorBuilder::new("int main(void) { char *hello = \"hi\"; }\n").filename("example.c").build();
 /// for token in cpp {
@@ -113,7 +113,7 @@ impl<'a> PreProcessorBuilder<'a> {
 /// Examples:
 ///
 /// ```
-/// use saltwater::saltwater_parser::PreProcessor;
+/// use saltwater::parser::PreProcessor;
 ///
 /// let cpp = PreProcessor::new("int main(void) { char *hello = \"hi\"; }\n", "example.c", false, vec![], Default::default());
 /// for token in cpp {
@@ -293,7 +293,7 @@ impl<'a> PreProcessor<'a> {
         })) = &mut token
         {
             if let Token::Id(name) = &data {
-                let strings = crate::saltwater_parser::intern::STRINGS
+                let strings = crate::parser::intern::STRINGS
                     .read()
                     .expect("failed to lock String cache for reading");
                 let tmp = strings.resolve(&name.0);
@@ -436,7 +436,7 @@ impl<'a> PreProcessor<'a> {
                     data: Token::Id(id),
                     location,
                 }) if self.file_processor.line() == line => {
-                    let strings = crate::saltwater_parser::intern::STRINGS
+                    let strings = crate::parser::intern::STRINGS
                         .read()
                         .expect("failed to lock String cache for reading");
                     let tmp = strings.resolve(&id.0);
@@ -478,7 +478,7 @@ impl<'a> PreProcessor<'a> {
     // Handle a directive. This assumes we have consumed the directive (e.g. `#if`),
     // but not the rest of the tokens on the current line.
     fn directive(&mut self, kind: DirectiveKind, start: u32) -> Result<(), CompileError> {
-        use crate::saltwater_parser::data::error::Warning as WarningDiagnostic;
+        use crate::parser::data::error::Warning as WarningDiagnostic;
         use DirectiveKind::*;
         match kind {
             If => {
@@ -710,7 +710,7 @@ impl<'a> PreProcessor<'a> {
             return Err(CompileError::new(CppError::EmptyExpression.into(), location));
         }
         // TODO: this only returns the first error because anything else requires a refactor
-        use crate::saltwater_parser::{Parser, analyze::PureAnalyzer};
+        use crate::parser::{Parser, analyze::PureAnalyzer};
         let mut parser = Parser::new(cpp_tokens.into_iter(), false);
         let expr = parser.expr()?;
         if !parser.is_empty() {
@@ -823,7 +823,7 @@ impl<'a> PreProcessor<'a> {
                 })) => {
                     let location = self.lexer().span(start);
                     self.error_handler
-                        .warn(crate::saltwater_parser::data::error::Warning::IgnoredVariadic, location);
+                        .warn(crate::parser::data::error::Warning::IgnoredVariadic, location);
                 }
                 Some(Ok(Locatable {
                     data: Token::Id(id), ..
@@ -922,7 +922,7 @@ impl<'a> PreProcessor<'a> {
     // `#include <file>` - system include
     // `#include "file"` - local include, but falls back to system include if `file` is not found.
     fn include(&mut self, start: u32) -> Result<(), Locatable<Error>> {
-        use crate::saltwater_parser::data::lex::ComparisonToken;
+        use crate::parser::data::lex::ComparisonToken;
         self.consume_whitespace_oneline(start, CppError::EmptyInclude)?;
         let lexer = self.lexer_mut();
         let local = if lexer.match_next('"') {
@@ -1055,7 +1055,7 @@ impl<'a> PreProcessor<'a> {
                 }
             }
         };
-        let source = crate::saltwater_parser::Source {
+        let source = crate::parser::Source {
             path,
             code: ArcStr::clone(&src),
         };
@@ -1126,7 +1126,7 @@ macro_rules! built_in_headers {
     ( $($filename: literal),+ $(,)? ) => {
         [
             // Relative to the current file, not the crate root
-            $( ($filename, include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/saltwater_parser/headers/", $filename))) ),+
+            $( ($filename, include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/parser/headers/", $filename))) ),+
         ]
     };
 }
@@ -1262,7 +1262,7 @@ static KEYWORDS: LazyLock<HashMap<&'static str, Keyword>> = LazyLock::new(|| {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::saltwater_parser::data::lex::test::{cpp, cpp_no_newline};
+    use crate::parser::data::lex::test::{cpp, cpp_no_newline};
 
     macro_rules! assert_err {
         ($src: expr, $err: pat, $description: expr $(,)?) => {
@@ -1739,7 +1739,7 @@ h",
 
     #[test]
     fn eof_after_macro_call() {
-        use crate::saltwater_parser::data::lex::test::cpp_no_newline;
+        use crate::parser::data::lex::test::cpp_no_newline;
 
         let cpp = cpp_no_newline("#define f(a)\nf")
             .filter_map(|res| res.ok().map(|token| token.data.to_string()))

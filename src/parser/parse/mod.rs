@@ -6,9 +6,9 @@ use std::collections::VecDeque;
 use std::iter::Iterator;
 use std::mem;
 
-use crate::saltwater_parser::RecursionGuard;
-use crate::saltwater_parser::data::*;
-use crate::saltwater_parser::data::{ast::ExternalDeclaration, hir::Scope, lex::Keyword};
+use crate::parser::RecursionGuard;
+use crate::parser::data::*;
+use crate::parser::data::{ast::ExternalDeclaration, hir::Scope, lex::Keyword};
 
 use super::CompileResult;
 
@@ -372,10 +372,10 @@ impl Token {
 #[cfg(test)]
 pub(crate) mod test {
     use super::Parser;
-    use crate::saltwater_parser::data::ast::ExternalDeclaration;
-    use crate::saltwater_parser::data::lex::test::cpp;
-    use crate::saltwater_parser::data::*;
-    use crate::saltwater_parser::lex::PreProcessor;
+    use crate::parser::data::ast::ExternalDeclaration;
+    use crate::parser::data::lex::test::cpp;
+    use crate::parser::data::*;
+    use crate::parser::lex::PreProcessor;
     use proptest::prelude::*;
 
     pub(crate) type ParseType = CompileResult<Locatable<ExternalDeclaration>>;
@@ -424,8 +424,8 @@ pub(crate) mod test {
     #[test]
     fn test_strings() {
         let assert_str = |s, expected: &str| {
-            use crate::saltwater_parser::data::ast::ExprType;
-            use crate::saltwater_parser::parse::expr::test::expr;
+            use crate::parser::data::ast::ExprType;
+            use crate::parser::parse::expr::test::expr;
 
             let e = expr(s).unwrap();
             let mut bytes = match e.data {

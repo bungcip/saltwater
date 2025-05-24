@@ -7,12 +7,12 @@ use cranelift::codegen::ir::types;
 use cranelift_module::Module;
 use cranelift_module::{DataDescription, DataId, Linkage};
 
-use crate::saltwater_parser;
+use crate::parser;
 
 use super::{Compiler, Id};
 use crate::const_assert;
-use saltwater_parser::arch::{PTR_SIZE, TARGET};
-use saltwater_parser::data::{
+use parser::arch::{PTR_SIZE, TARGET};
+use parser::data::{
     StorageClass,
     hir::{Expr, ExprType, Initializer, LiteralValue, Symbol},
     types::ArrayType,
@@ -73,7 +73,7 @@ impl Compiler {
         // }
         let linkage = linkage_from_storage_class(metadata.storage_class).map_err(err_closure)?;
 
-        let strings = crate::saltwater_parser::intern::STRINGS
+        let strings = crate::parser::intern::STRINGS
             .read()
             .expect("failed to lock String cache for reading");
         let tmp = strings.resolve(&metadata.id.0);

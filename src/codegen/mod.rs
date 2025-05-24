@@ -19,8 +19,8 @@ use std::convert::TryFrom;
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::saltwater_parser::arch::TARGET;
-use crate::saltwater_parser::{Opt, Program};
+use crate::parser::arch::TARGET;
+use crate::parser::{Opt, Program};
 use codegen::ir::UserFuncName;
 use cranelift::codegen::{
     self,
@@ -38,7 +38,7 @@ use cranelift::prelude::{Block, FunctionBuilder, FunctionBuilderContext};
 use cranelift_module::{self, DataId, FuncId, Linkage, Module};
 use cranelift_object::{ObjectBuilder, ObjectModule};
 
-use crate::saltwater_parser::data::{
+use crate::parser::data::{
     StorageClass,
     hir::{Declaration, Initializer, Stmt, Symbol},
     types::FunctionType,
@@ -147,7 +147,7 @@ impl Compiler {
             StorageClass::Static => Linkage::Local,
             StorageClass::Register | StorageClass::Typedef => unreachable!(),
         };
-        let strings = crate::saltwater_parser::intern::STRINGS
+        let strings = crate::parser::intern::STRINGS
             .read()
             .expect("failed to lock String cache for reading");
         let tmp = strings.resolve(&metadata.id.0);
@@ -341,7 +341,7 @@ pub type Product = cranelift_object::ObjectProduct;
 
 /// Compile and return the declarations and warnings.
 pub fn compile(module: ObjectModule, buf: &str, opt: Opt) -> Program<ObjectModule> {
-    use crate::saltwater_parser::check_semantics;
+    use crate::parser::check_semantics;
     use crate::vec_deque;
 
     let debug_asm = opt.debug_asm;
@@ -398,11 +398,11 @@ pub fn compile(module: ObjectModule, buf: &str, opt: Opt) -> Program<ObjectModul
     }
 }
 
-pub fn assemble(product: Product, output: &Path) -> Result<(), crate::saltwater_parser::Error> {
+pub fn assemble(product: Product, output: &Path) -> Result<(), crate::parser::Error> {
     use std::fs::File;
     use std::io::{self, Write};
 
-    let bytes = product.emit().map_err(crate::saltwater_parser::Error::Platform)?;
+    let bytes = product.emit().map_err(crate::parser::Error::Platform)?;
     File::create(output)?.write_all(&bytes).map_err(io::Error::into)
 }
 

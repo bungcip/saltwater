@@ -58,7 +58,7 @@ impl InternedStr {
 
 impl fmt::Display for InternedStr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let strings = crate::saltwater_parser::intern::STRINGS
+        let strings = crate::parser::intern::STRINGS
             .read()
             .expect("failed to lock String cache for reading");
         let tmp = strings.resolve(&self.0);

@@ -4,8 +4,8 @@ use std::cmp::max;
 
 use target_lexicon::Triple;
 
-use crate::saltwater_parser::Type::*;
-use crate::saltwater_parser::data::{
+use crate::parser::Type::*;
+use crate::parser::data::{
     types::{ArrayType, StructType},
     *,
 };
@@ -156,7 +156,7 @@ impl Type {
 mod tests {
     use proptest::prelude::*;
 
-    use crate::saltwater_parser::data::{
+    use crate::parser::data::{
         StorageClass,
         hir::Qualifiers,
         hir::Variable,

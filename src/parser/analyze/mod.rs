@@ -7,10 +7,10 @@ use std::convert::TryInto;
 
 use counter::Counter;
 
-use crate::saltwater_parser::RecursionGuard;
-use crate::saltwater_parser::data::{error::Warning, hir::*, lex::Keyword, *};
-use crate::saltwater_parser::intern::InternedStr;
-use crate::saltwater_parser::parse::{Lexer, Parser};
+use crate::parser::RecursionGuard;
+use crate::parser::data::{error::Warning, hir::*, lex::Keyword, *};
+use crate::parser::intern::InternedStr;
+use crate::parser::parse::{Lexer, Parser};
 
 pub(crate) type TagScope = Scope<InternedStr, TagEntry>;
 
@@ -600,7 +600,7 @@ impl PureAnalyzer {
                     ));
                     self.err(err, location);
                 // struct s { int i: 65 }
-                } else if bit_size > type_size * u64::from(crate::saltwater_parser::arch::CHAR_BIT) {
+                } else if bit_size > type_size * u64::from(crate::parser::arch::CHAR_BIT) {
                     let err = SemanticError::from(format!(
                         "cannot have bitfield {} with size {} larger than containing type {}",
                         symbol.id, bit_size, symbol.ctype
@@ -784,8 +784,8 @@ impl PureAnalyzer {
     ///
     /// 6.7.6 Declarators
     fn parse_declarator(&mut self, current: Type, decl: ast::DeclaratorType, location: Location) -> Type {
-        use crate::saltwater_parser::data::ast::DeclaratorType::*;
-        use crate::saltwater_parser::data::types::{ArrayType, FunctionType};
+        use crate::parser::data::ast::DeclaratorType::*;
+        use crate::parser::data::types::{ArrayType, FunctionType};
 
         let _guard = self.recursion_check();
         match decl {
@@ -918,7 +918,7 @@ impl PureAnalyzer {
             .map_err(|runtime_expr| Locatable::new(SemanticError::NotConstant(runtime_expr).into(), location))
     }
     /// Return an unsigned integer that can be evaluated at compile time, or an error otherwise.
-    fn const_uint(expr: Expr) -> CompileResult<crate::saltwater_parser::arch::SIZE_T> {
+    fn const_uint(expr: Expr) -> CompileResult<crate::parser::arch::SIZE_T> {
         use LiteralValue::*;
 
         let location = expr.location;
@@ -1233,9 +1233,9 @@ impl UnitSpecifier {
 #[cfg(test)]
 pub(crate) mod test {
     use super::{Error, *};
-    use crate::saltwater_parser::data::types::{ArrayType, FunctionType, Type::*};
-    use crate::saltwater_parser::lex::PreProcessor;
-    use crate::saltwater_parser::parse::test::*;
+    use crate::parser::data::types::{ArrayType, FunctionType, Type::*};
+    use crate::parser::lex::PreProcessor;
+    use crate::parser::parse::test::*;
 
     pub(crate) fn analyze<'c, 'input: 'c, P, A, R, S, E>(
         input: &'input str,

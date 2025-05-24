@@ -1,6 +1,6 @@
 pub mod codegen;
 pub mod driver;
 pub mod pp;
-pub mod saltwater_parser;
+pub mod parser;
 
-pub use saltwater_parser::{Error, Files, Opt, Program};
+pub use parser::{Error, Files, Opt, Program};

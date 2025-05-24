@@ -1,7 +1,7 @@
 use super::{CompileResult, LiteralToken, Locatable, Token};
-use crate::saltwater_parser::data::hir::LiteralValue;
-use crate::saltwater_parser::data::lex::test::{cpp, cpp_no_newline};
-use crate::saltwater_parser::intern::InternedStr;
+use crate::parser::data::hir::LiteralValue;
+use crate::parser::data::lex::test::{cpp, cpp_no_newline};
+use crate::parser::intern::InternedStr;
 use arcstr::Substr;
 
 type LexType = CompileResult<Locatable<Token>>;
@@ -289,7 +289,7 @@ fn test_characters() {
     assert!(lex(invalid).unwrap().unwrap_err().is_lex_err());
 
     // catch overflow in hex escapes
-    use crate::saltwater_parser::data::{
+    use crate::parser::data::{
         Radix,
         error::{Error, LexError},
     };

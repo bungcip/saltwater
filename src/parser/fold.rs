@@ -1,7 +1,7 @@
-use crate::saltwater_parser::arch::CHAR_BIT;
-use crate::saltwater_parser::data::hir::LiteralValue::*;
-use crate::saltwater_parser::data::hir::*;
-use crate::saltwater_parser::data::*;
+use crate::parser::arch::CHAR_BIT;
+use crate::parser::data::hir::LiteralValue::*;
+use crate::parser::data::hir::*;
+use crate::parser::data::*;
 use std::ops::{Add, Div, Mul, Sub};
 
 macro_rules! fold_int_bin_op {
@@ -509,9 +509,9 @@ fn shift_left(left: Expr, right: Expr, ctype: &Type, location: &Location) -> Com
 
 #[cfg(test)]
 mod tests {
-    use crate::saltwater_parser::analyze::test::analyze_expr;
-    use crate::saltwater_parser::data::hir::Expr;
-    use crate::saltwater_parser::data::*;
+    use crate::parser::analyze::test::analyze_expr;
+    use crate::parser::data::hir::Expr;
+    use crate::parser::data::*;
 
     fn test_const_fold(s: &str) -> CompileResult<Expr> {
         analyze_expr(s).unwrap().const_fold()

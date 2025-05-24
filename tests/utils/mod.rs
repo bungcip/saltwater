@@ -9,7 +9,7 @@ extern crate tempfile;
 
 use log::info;
 use saltwater::codegen::{assemble, initialize_aot_module, link};
-use saltwater::saltwater_parser::{Error, Opt};
+use saltwater::parser::{Error, Opt};
 
 pub fn init() {
     env_logger::builder().is_test(true).init();

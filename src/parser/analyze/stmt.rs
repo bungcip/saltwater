@@ -1,5 +1,5 @@
 use super::FunctionAnalyzer;
-use crate::saltwater_parser::data::{Location, ast, error::SemanticError, hir::*, lex::Locatable};
+use crate::parser::data::{Location, ast, error::SemanticError, hir::*, lex::Locatable};
 
 impl FunctionAnalyzer<'_> {
     #[inline(always)]
@@ -129,7 +129,7 @@ impl FunctionAnalyzer<'_> {
     // 6.8.6.4 The return statement
     // A value of `None` for `expr` means `return;`
     fn return_statement(&mut self, expr: Option<ast::Expr>, location: Location) -> StmtType {
-        use crate::saltwater_parser::data::Type;
+        use crate::parser::data::Type;
 
         let expr = expr.map(|e| self.expr(e));
         let ret_type = &self.metadata.return_type;
@@ -162,11 +162,11 @@ impl FunctionAnalyzer<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::saltwater_parser::Location;
-    use crate::saltwater_parser::Parser;
-    use crate::saltwater_parser::analyze::FunctionData;
-    use crate::saltwater_parser::analyze::test::{analyze, analyze_expr};
-    use crate::saltwater_parser::data::*;
+    use crate::parser::Location;
+    use crate::parser::Parser;
+    use crate::parser::analyze::FunctionData;
+    use crate::parser::analyze::test::{analyze, analyze_expr};
+    use crate::parser::data::*;
 
     fn parse_stmt(stmt: &str) -> CompileResult<Stmt> {
         analyze(stmt, Parser::statement, |a, stmt| {

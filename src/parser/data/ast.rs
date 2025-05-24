@@ -1,9 +1,9 @@
 use std::fmt::{self, Display};
 
 use super::{joined, joined_locatable};
-use crate::saltwater_parser::data::hir::LiteralValue;
-use crate::saltwater_parser::data::lex::{AssignmentToken, ComparisonToken, Locatable};
-use crate::saltwater_parser::intern::InternedStr;
+use crate::parser::data::hir::LiteralValue;
+use crate::parser::data::lex::{AssignmentToken, ComparisonToken, Locatable};
+use crate::parser::intern::InternedStr;
 
 // pub(crate) type Program = Vec<Declaration>;
 
@@ -667,7 +667,7 @@ impl Display for Expr {
 
 #[cfg(test)]
 mod test {
-    use crate::saltwater_parser::parse::decl::test::assert_no_change;
+    use crate::parser::parse::decl::test::assert_no_change;
 
     #[test]
     fn test_declaration_display() {

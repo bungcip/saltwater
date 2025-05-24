@@ -1,7 +1,7 @@
 mod codegen;
 mod driver;
 mod pp;
-mod saltwater_parser;
+mod parser;
 
 use std::collections::VecDeque;
 use std::fs::File;
@@ -11,15 +11,15 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use crate::saltwater_parser::Location;
+use crate::parser::Location;
 use ansi_term::{ANSIString, Colour};
 use arcstr::ArcStr;
 use codegen::{assemble, compile, link};
 use pico_args::Arguments;
-use saltwater_parser::{CompileWarning, Files, Locatable, Opt, PreProcessor, Token};
+use parser::{CompileWarning, Files, Locatable, Opt, PreProcessor, Token};
 use tempfile::NamedTempFile;
 
-use crate::saltwater_parser::{Error, Program};
+use crate::parser::{Error, Program};
 
 static ERRORS: AtomicUsize = AtomicUsize::new(0);
 static WARNINGS: AtomicUsize = AtomicUsize::new(0);
@@ -279,7 +279,7 @@ fn parse_args() -> Result<(BinOpt, PathBuf), pico_args::Error> {
         std::process::exit(0);
     }
     if input.contains("--print-type-sizes") {
-        use saltwater_parser::data::*;
+        use parser::data::*;
         type_sizes!(
             Location,
             CompileError,
@@ -313,7 +313,7 @@ fn parse_args() -> Result<(BinOpt, PathBuf), pico_args::Error> {
     let mut definitions = HashMap::new();
     while let Some(arg) = input.opt_value_from_str::<_, String>(["-D", "--define"])? {
         use pico_args::Error::ArgumentParsingFailed;
-        use saltwater_parser::data::error::LexError;
+        use parser::data::error::LexError;
 
         let mut iter = arg.splitn(2, '=');
         let key = iter.next().expect("apparently I don't understand pico_args");
@@ -467,12 +467,12 @@ mod backtrace {
 
 #[cfg(test)]
 mod test {
-    use super::saltwater_parser::Files;
-    use super::saltwater_parser::Location;
-    use crate::saltwater_parser;
+    use super::parser::Files;
+    use super::parser::Location;
+    use crate::parser;
 
     use ansi_term::Style;
-    use saltwater_parser::data::lex::Span;
+    use parser::data::lex::Span;
 
     fn pp<S: Into<Span>>(span: S, source: &str) -> String {
         let mut file_db = Files::new();

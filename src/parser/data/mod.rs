@@ -4,7 +4,7 @@ pub mod hir;
 pub mod lex;
 pub mod types;
 
-pub use crate::saltwater_parser::intern::InternedStr;
+pub use crate::parser::intern::InternedStr;
 pub(crate) use error::{CompileError, CompileResult, CompileWarning, Error, ErrorHandler, SemanticError, SyntaxError};
 pub use hir::LiteralValue;
 pub use lex::{LiteralToken, Locatable, Location, Token};
@@ -14,7 +14,7 @@ pub use types::{StructRef, StructType};
 use std::convert::TryFrom;
 use std::fmt::{self, Display};
 
-// use crate::saltwater_parser::lex::Keyword;
+// use crate::parser::lex::Keyword;
 
 // used by both `ast` and `hir`
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
@@ -82,8 +82,8 @@ impl TryFrom<u32> for Radix {
 
 #[cfg(test)]
 mod tests {
-    use crate::saltwater_parser::Parser;
-    use crate::saltwater_parser::analyze::test::analyze;
+    use crate::parser::Parser;
+    use crate::parser::analyze::test::analyze;
 
     #[test]
     fn type_display() {
@@ -104,14 +104,14 @@ mod tests {
 }
 
 mod codegen_impls {
-    use crate::saltwater_parser::arch::*;
-    use crate::saltwater_parser::data::{
+    use crate::parser::arch::*;
+    use crate::parser::data::{
         Type,
         error::CompileError,
         lex::{ComparisonToken, Locatable},
         types::FunctionType,
     };
-    use crate::saltwater_parser::intern::InternedStr;
+    use crate::parser::intern::InternedStr;
     use cranelift_codegen::ir::Signature;
     use cranelift_codegen::ir::{
         AbiParam, ArgumentPurpose,

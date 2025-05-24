@@ -11,7 +11,7 @@ use proptest_derive::Arbitrary;
 use super::lex::{ComparisonToken, Keyword, Locatable};
 use super::types::Type;
 use super::*;
-use crate::saltwater_parser::intern::InternedStr;
+use crate::parser::intern::InternedStr;
 
 pub type Stmt = Locatable<StmtType>;
 
@@ -573,8 +573,8 @@ impl Eq for Symbol {}
 
 #[cfg(test)]
 mod tests {
-    use crate::saltwater_parser::analyze::{PureAnalyzer, test::analyze};
-    use crate::saltwater_parser::{Locatable, Parser};
+    use crate::parser::analyze::{PureAnalyzer, test::analyze};
+    use crate::parser::{Locatable, Parser};
 
     #[test]
     fn type_display() {

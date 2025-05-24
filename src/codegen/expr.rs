@@ -4,7 +4,7 @@ use cranelift_codegen::ir::condcodes::IntCC;
 use cranelift_module::Module;
 
 use super::{Compiler, Id};
-use crate::saltwater_parser::data::{
+use crate::parser::data::{
     hir::{self, BinaryOp, Expr, ExprType, LiteralValue, Symbol, Variable},
     lex::ComparisonToken,
     *,
