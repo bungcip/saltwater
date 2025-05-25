@@ -398,7 +398,7 @@ fn pretty_print<T: std::fmt::Display>(prefix: ANSIString, msg: T, location: Loca
         .expect("start location should be in bounds");
     let buf = format!(
         "{}:{}:{} {}: {}\n",
-        file_db.name(file).to_string_lossy(),
+        file_db.name(file).to_string(),
         start.line.number(),
         start.column.number(),
         prefix,
