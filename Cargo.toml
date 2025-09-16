@@ -27,10 +27,10 @@ tempfile = "3.9"
 pico-args = { version = "0.5", features = ["short-space-opt"] }
 color-backtrace = { version = "0.7", default-features = false, optional = true }
 atty = { version = "0.2", default-features = false }
-cranelift = "0.119"
-cranelift-module = "0.119"
-cranelift-object = "0.119"
-cranelift-codegen = "0.119"
+cranelift = "0.123"
+cranelift-module = "0.123"
+cranelift-object = "0.123"
+cranelift-codegen = "0.123"
 target-lexicon = "0.13"
 hexponent = "0.3"
 thiserror = "^2.0"

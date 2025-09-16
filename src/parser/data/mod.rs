@@ -203,13 +203,6 @@ mod codegen_impls {
                     .map(|param| AbiParam::new(param.get().ctype.as_ir_type()))
                     .collect()
             };
-            if self.varargs {
-                // let al = isa
-                //     .register_info()
-                //     .parse_regunit("rax")
-                //     .expect("x86 should have an rax register");
-                params.push(AbiParam::special(types::I8, ArgumentPurpose::Normal));
-            }
             let return_type = if !self.should_return() {
                 vec![]
             } else {

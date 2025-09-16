@@ -5,7 +5,7 @@ use cranelift_module::Module;
 
 use super::{Compiler, Id};
 use crate::parser::data::{
-    hir::{self, BinaryOp, Expr, ExprType, LiteralValue, Symbol, Variable},
+    hir::{self, BinaryOp, Expr, ExprType, LiteralValue, Symbol},
     lex::ComparisonToken,
     *,
 };
@@ -151,11 +151,11 @@ impl Compiler {
 
         builder.switch_to_block(block_if_true);
         let left_val = self.compile_expr(left, builder)?;
-        builder.ins().jump(target_block, &[left_val.ir_val]);
+        builder.ins().jump(target_block, &[left_val.ir_val.into()]);
 
         builder.switch_to_block(block_if_false);
         let right_val = self.compile_expr(right, builder)?;
-        builder.ins().jump(target_block, &[right_val.ir_val]);
+        builder.ins().jump(target_block, &[right_val.ir_val.into()]);
 
         builder.switch_to_block(target_block);
 
@@ -175,16 +175,16 @@ impl Compiler {
         if op == LogicalOp::Or {
             builder
                 .ins()
-                .brif(left.ir_val, merge_block, &[left.ir_val], right_block, &[]);
+                .brif(left.ir_val, merge_block, &[left.ir_val.into()], right_block, &[]);
         } else {
             builder
                 .ins()
-                .brif(left.ir_val, right_block, &[], merge_block, &[left.ir_val]);
+                .brif(left.ir_val, right_block, &[], merge_block, &[left.ir_val.into()]);
         }
 
         builder.switch_to_block(right_block);
         let right = self.compile_expr(right, builder)?;
-        builder.ins().jump(merge_block, &[right.ir_val]);
+        builder.ins().jump(merge_block, &[right.ir_val.into()]);
 
         builder.switch_to_block(merge_block);
         let result_value = *builder.block_params(merge_block).first().unwrap();
@@ -461,44 +461,32 @@ impl Compiler {
     }
     fn call(&mut self, func: FuncCall, ctype: Type, args: Vec<Expr>, builder: &mut FunctionBuilder) -> IrResult {
         use cranelift::codegen::ir::{AbiParam, ArgumentPurpose};
-        use hir::Qualifiers;
 
-        let mut ftype = match ctype {
+        let ftype = match ctype {
             Type::Function(ftype) => ftype,
             _ => unreachable!("parser should only allow calling functions"),
         };
-        let mut float_variadic = 0;
-        if ftype.varargs {
-            // needs to be done before we move the args by compiling them
-            let isa_name = self.module.isa().name();
-            if isa_name != "x86" && isa_name != "x64" {
-                unimplemented!("variadic args for architectures other than x86 (isa = {})", isa_name);
-            }
-            // this is an utter hack
-            // https://github.com/CraneStation/cranelift/issues/212#issuecomment-549111736
-            for arg in &args[ftype.params.len()..] {
-                if arg.ctype.is_floating() {
-                    float_variadic += 1;
+
+        let mut compiled_args = Vec::new();
+        for (i, arg) in args.into_iter().enumerate() {
+            let mut val = self.compile_expr(arg, builder)?;
+            if ftype.varargs && i >= ftype.params.len() {
+                // variadic arguments are promoted
+                if val.ctype == Type::Float {
+                    let cast_to_double =
+                        Self::cast_ir(types::F32, types::F64, val.ir_val, true, true, builder);
+                    val = Value {
+                        ir_val: cast_to_double,
+                        ir_type: types::F64,
+                        ctype: Type::Double,
+                    };
                 }
-                ftype.params.push(
-                    Variable {
-                        ctype: arg.ctype.clone(),
-                        id: Default::default(),
-                        qualifiers: Qualifiers::NONE,
-                        storage_class: StorageClass::Auto,
-                    }
-                    .insert(),
-                );
             }
+            compiled_args.push(val);
         }
-        let mut compiled_args: Vec<IrValue> = args
-            .into_iter()
-            .map(|arg| self.compile_expr(arg, builder).map(|val| val.ir_val))
-            .collect::<CompileResult<_>>()?;
-        if ftype.varargs {
-            let float_ir = builder.ins().iconst(types::I8, float_variadic);
-            compiled_args.push(float_ir);
-        }
+
+        let mut ir_args: Vec<_> = compiled_args.iter().map(|v| v.ir_val).collect();
+
         let call = match func {
             FuncCall::Named(func_name) => {
                 let func_id = match self.declarations.get(&func_name) {
@@ -506,36 +494,39 @@ impl Compiler {
                     _ => panic!("parser should catch illegal function calls"),
                 };
                 let func_ref = self.module.declare_func_in_func(func_id, builder.func);
-                let call = builder.ins().call(func_ref, compiled_args.as_slice());
-                // stolen from https://github.com/bjorn3/rustc_codegen_cranelift/blob/82fde5b62281fa51a/src/abi/mod.rs#L535
+
                 if ftype.varargs {
-                    let call_sig = builder.func.dfg.call_signature(call).unwrap();
-                    // let al = self
-                    //     .module
-                    //     .isa()
-                    //     // .register_info()
-                    //     .parse_regunit("rax")
-                    //     .expect("x86 should have an rax register");
-                    let float_arg = AbiParam::special(types::I8, ArgumentPurpose::Normal);
-                    // NOTE: this is added both here and in signature() because we overwrite the previous params
-                    let abi_params = ftype
-                        .params
-                        .into_iter()
-                        .map(|param| AbiParam::new(param.get().ctype.as_ir_type()))
-                        .chain(std::iter::once(float_arg))
-                        .collect();
-                    builder.func.dfg.signatures[call_sig].params = abi_params;
+                    let mut sig = ftype.signature(self.module.isa());
+                    sig.params.extend(
+                        compiled_args[ftype.params.len()..]
+                            .iter()
+                            .map(|val| AbiParam::new(val.ir_type)),
+                    );
+                    let sig_ref = builder.import_signature(sig);
+                    let callee = builder
+                        .ins()
+                        .func_addr(self.module.target_config().pointer_type(), func_ref);
+                    builder.ins().call_indirect(sig_ref, callee, &ir_args)
+                } else {
+                    builder.ins().call(func_ref, &ir_args)
                 }
-                call
             }
             FuncCall::Indirect(callee) => {
-                let sig = ftype.signature(self.module.isa());
-                let sigref = builder.import_signature(sig);
+                let mut sig = ftype.signature(self.module.isa());
+                if ftype.varargs {
+                    sig.params.extend(
+                        compiled_args[ftype.params.len()..]
+                            .iter()
+                            .map(|val| AbiParam::new(val.ir_type)),
+                    );
+                }
+                let sig_ref = builder.import_signature(sig);
                 builder
                     .ins()
-                    .call_indirect(sigref, callee.ir_val, compiled_args.as_slice())
+                    .call_indirect(sig_ref, callee.ir_val, &ir_args)
             }
         };
+
         let ir_val = match builder.inst_results(call).first() {
             // Just a placeholder.
             None => builder.ins().iconst(types::I32, 0),
