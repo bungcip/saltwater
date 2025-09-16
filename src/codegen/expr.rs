@@ -460,7 +460,7 @@ impl Compiler {
         Ok(value)
     }
     fn call(&mut self, func: FuncCall, ctype: Type, args: Vec<Expr>, builder: &mut FunctionBuilder) -> IrResult {
-        use cranelift::codegen::ir::{AbiParam, ArgumentPurpose};
+        use cranelift::codegen::ir::AbiParam;
 
         let ftype = match ctype {
             Type::Function(ftype) => ftype,
@@ -485,7 +485,7 @@ impl Compiler {
             compiled_args.push(val);
         }
 
-        let mut ir_args: Vec<_> = compiled_args.iter().map(|v| v.ir_val).collect();
+        let ir_args: Vec<_> = compiled_args.iter().map(|v| v.ir_val).collect();
 
         let call = match func {
             FuncCall::Named(func_name) => {

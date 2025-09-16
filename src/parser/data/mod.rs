@@ -104,6 +104,7 @@ mod tests {
 }
 
 mod codegen_impls {
+    use super::SemanticError;
     use crate::parser::arch::*;
     use crate::parser::data::{
         Type,
@@ -172,11 +173,11 @@ mod codegen_impls {
                 _ => types::INVALID,
             }
         }
-        pub fn member_offset(&self, member: InternedStr) -> Result<u64, ()> {
+        pub fn member_offset(&self, member: InternedStr) -> Result<u64, SemanticError> {
             match self {
                 Type::Struct(stype) => Ok(stype.offset(member)),
                 Type::Union(_) => Ok(0),
-                _ => Err(()),
+                _ => Err(SemanticError::NotAStruct(self.clone())),
             }
         }
     }
@@ -194,7 +195,7 @@ mod codegen_impls {
 
         /// Generate the IR function signature for `self`
         pub fn signature(&self, _isa: &dyn TargetIsa) -> Signature {
-            let mut params = if self.params.len() == 1 && self.params[0].get().ctype == Type::Void {
+            let params = if self.params.len() == 1 && self.params[0].get().ctype == Type::Void {
                 // no arguments
                 Vec::new()
             } else {
