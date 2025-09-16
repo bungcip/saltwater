@@ -1201,12 +1201,11 @@ impl Expr {
             // > and (considering the type the left operand would have after lvalue conversion)
             // > both operands are pointers to qualified or unqualified versions of compatible types,
             // > and the type pointed to by the left has all the qualifiers of the type pointed to by the right;
-            if let (Type::Pointer(a, from), Type::Pointer(b, to)) = (&expr.ctype, ctype) {
-                if *a == *b && from.contains_all(*to) {
+            if let (Type::Pointer(a, from), Type::Pointer(b, to)) = (&expr.ctype, ctype)
+                && *a == *b && from.contains_all(*to) {
                     expr.ctype = ctype.clone();
                     return expr;
                 }
-            }
             // There is probably a better way to do this
             // don't report cascading errors
             if *ctype != Type::Error {

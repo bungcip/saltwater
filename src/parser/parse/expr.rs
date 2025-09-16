@@ -173,17 +173,15 @@ impl<I: Lexer> Parser<I> {
     // ambiguity between '(' expr ')' and '(' type_name ')'
     // NOTE: there is no distinction between EOF and a non-parenthesized type here
     fn parenthesized_type(&mut self) -> SyntaxResult<Option<Locatable<TypeName>>> {
-        if self.peek_token() == Some(&Token::LeftParen) {
-            if let Some(lookahead) = self.peek_next_token() {
-                if lookahead.is_decl_specifier() {
+        if self.peek_token() == Some(&Token::LeftParen)
+            && let Some(lookahead) = self.peek_next_token()
+                && lookahead.is_decl_specifier() {
                     let left_paren = self.next_token().unwrap().location;
                     let mut ctype = self.type_name()?;
                     let right_paren = self.expect(Token::RightParen)?.location;
                     ctype.location = left_paren.merge(right_paren);
                     return Ok(Some(ctype));
                 }
-            }
-        }
         Ok(None)
     }
     // prefix_operator* postfix_expr

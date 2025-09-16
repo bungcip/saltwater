@@ -76,9 +76,7 @@ impl<I: Lexer> Parser<I> {
             return Ok(Locatable::new(ExternalDeclaration::Function(def), location));
         }
         let mut decls = vec![declarator];
-        let has_typedef = specifiers
-            .iter()
-            .any(|s| *s == DeclarationSpecifier::Unit(crate::parser::data::ast::UnitSpecifier::Typedef));
+        let has_typedef = specifiers.contains(&DeclarationSpecifier::Unit(crate::parser::data::ast::UnitSpecifier::Typedef));
         while self.match_next(&Token::Semicolon).is_none() {
             self.expect(Token::Comma)?;
             let decl = self.init_declarator()?;
@@ -532,12 +530,11 @@ impl<I: Lexer> Parser<I> {
                 // Array; Specified in section 6.7.6.2 of the C11 spec
                 Token::LeftBracket => {
                     self.expect(Token::LeftBracket).unwrap();
-                    if let Some(token) = self.match_next(&Token::Keyword(Keyword::Static)) {
-                        if !allow_abstract {
+                    if let Some(token) = self.match_next(&Token::Keyword(Keyword::Static))
+                        && !allow_abstract {
                             self.error_handler
                                 .push_back(Locatable::new(SyntaxError::StaticInConcreteArray, token.location));
                         }
-                    }
                     let (size, location) = match self.match_next(&Token::RightBracket) {
                         Some(token) => (None, token.location),
                         _ => {

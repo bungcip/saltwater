@@ -145,15 +145,14 @@ impl<'a> Macro<'a> {
                 if tokens.eat(&Token::Punct('#')) && tokens.eat(&Token::Punct('#')) {
                     tokens.eat(&Token::Whitespace);
 
-                    if let Some(Replacement::Verbatim(verbatim_tokens)) = replacements.last_mut() {
-                        if let Some((Token::Whitespace, rest)) = verbatim_tokens.split_last() {
+                    if let Some(Replacement::Verbatim(verbatim_tokens)) = replacements.last_mut()
+                        && let Some((Token::Whitespace, rest)) = verbatim_tokens.split_last() {
                             if rest.is_empty() {
                                 replacements.pop();
                             } else {
                                 *verbatim_tokens = rest;
                             }
                         }
-                    }
 
                     Some(match replacements.pop() {
                         Some(Replacement::Verbatim(verbatim_tokens)) => {
@@ -623,13 +622,12 @@ impl Macro<'_> {
                                     }
                                 },
                             };
-                            if let ConcatPart::Param(ParamMode::Normal, i) = part {
-                                if let [_, verbatim @ .., last] = args[i] {
+                            if let ConcatPart::Param(ParamMode::Normal, i) = part
+                                && let [_, verbatim @ .., last] = args[i] {
                                     substituted_tokens.extend(tok.take());
                                     substituted_tokens.extend_from_slice(verbatim);
                                     tok = Some(last.clone());
                                 }
-                            }
                         }
                         substituted_tokens.extend(tok);
                     }
@@ -652,8 +650,8 @@ impl Expander<'_> {
         let mut tokens = tokens.iter();
         while let Some(tok) = tokens.next() {
             if let Token::Ident(name) = tok {
-                if name == "defined" && outer.originates_from_cond() {
-                    if let Some(arg_name) = tokens.try_eat(|tokens| {
+                if name == "defined" && outer.originates_from_cond()
+                    && let Some(arg_name) = tokens.try_eat(|tokens| {
                         tokens.eat(&Token::Whitespace);
                         match tokens.next()? {
                             Token::Ident(name) => Some(name),
@@ -675,17 +673,15 @@ impl Expander<'_> {
                         any_expansions = true;
                         continue;
                     }
-                }
 
-                if let Some(m) = self.defines.get(&name[..]) {
-                    if let Some(expanded_tokens) =
+                if let Some(m) = self.defines.get(&name[..])
+                    && let Some(expanded_tokens) =
                         tokens.try_eat(|arg_tokens| m.try_expand(name, self, outer, arg_tokens))
                     {
                         output_tokens.extend(expanded_tokens);
                         any_expansions = true;
                         continue;
                     }
-                }
             }
 
             output_tokens.push(tok.clone());
@@ -860,8 +856,8 @@ impl<'a> Expander<'a> {
 
                     if name == "include" || name == "include_next" && self.enclosing_header.is_some() {
                         let mut tokens = tokens.iter();
-                        if let Some((style, header_name)) = parse_header_name(&mut tokens) {
-                            if tokens.next().is_none() {
+                        if let Some((style, header_name)) = parse_header_name(&mut tokens)
+                            && tokens.next().is_none() {
                                 let start_after = if name == "include_next" {
                                     self.enclosing_header
                                 } else {
@@ -882,7 +878,6 @@ impl<'a> Expander<'a> {
                                     continue;
                                 }
                             }
-                        }
                     }
 
                     if name == "define" {
@@ -893,34 +888,27 @@ impl<'a> Expander<'a> {
                         }
                     }
 
-                    if name == "undef" {
-                        if let [Token::Ident(name)] = &tokens[..] {
+                    if name == "undef"
+                        && let [Token::Ident(name)] = &tokens[..] {
                             self.defines.remove(&name[..]);
                             continue;
                         }
-                    }
 
                     // HACK(eddyb) hide some (noop?) pragmas.
-                    if name == "pragma" {
-                        if let [Token::Ident(ns), Token::Whitespace, Token::Ident(pragma), rest @ ..] = &tokens[..] {
-                            if ns == "GCC" {
+                    if name == "pragma"
+                        && let [Token::Ident(ns), Token::Whitespace, Token::Ident(pragma), rest @ ..] = &tokens[..]
+                            && ns == "GCC" {
                                 if pragma == "system_header" && rest.is_empty() {
                                     continue;
                                 }
-                                if pragma == "diagnostic" {
-                                    if let [Token::Whitespace, Token::Ident(action), rest @ ..] = rest {
-                                        if action == "ignored" {
-                                            if let [Token::Whitespace, Token::Literal(diagnostics)] = rest {
-                                                if diagnostics == "\"-Wliteral-suffix\"" {
+                                if pragma == "diagnostic"
+                                    && let [Token::Whitespace, Token::Ident(action), rest @ ..] = rest
+                                        && action == "ignored"
+                                            && let [Token::Whitespace, Token::Literal(diagnostics)] = rest
+                                                && diagnostics == "\"-Wliteral-suffix\"" {
                                                     continue;
                                                 }
-                                            }
-                                        }
-                                    }
-                                }
                             }
-                        }
-                    }
 
                     // FIXME(eddyb) DRY this.
                     output_tokens.push(Token::Punct('#'));

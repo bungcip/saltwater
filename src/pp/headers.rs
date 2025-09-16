@@ -33,14 +33,13 @@ impl Headers {
         name: &Path,
         start_after: Option<&Header>,
     ) -> Option<(Option<usize>, PathBuf)> {
-        if style == IncludeStyle::Quoted && start_after.is_none() {
-            if let Some(parent) = enclosing_src_file.path.parent() {
+        if style == IncludeStyle::Quoted && start_after.is_none()
+            && let Some(parent) = enclosing_src_file.path.parent() {
                 let path = parent.join(name);
                 if path.is_file() {
                     return Some((None, path));
                 }
             }
-        }
 
         let start_idx = start_after.and_then(|h| Some(h.search_path_idx? + 1)).unwrap_or(0);
         for (i, search_path) in self.search_paths.iter().enumerate().skip(start_idx) {

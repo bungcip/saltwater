@@ -97,8 +97,8 @@ impl Compiler {
         // TODO: all of this should happen in the `analyze` module
         if let Some(init) = init {
             let mut ctype = metadata.ctype.clone();
-            if let Type::Array(_, size @ ArrayType::Unbounded) = &mut ctype {
-                if let Some(len) = match &init {
+            if let Type::Array(_, size @ ArrayType::Unbounded) = &mut ctype
+                && let Some(len) = match &init {
                     Initializer::List(list) => Some(list.len()),
                     Initializer::Scalar(expr) => match &expr.expr {
                         ExprType::Literal(LiteralValue::Str(s)) => Some(s.len()),
@@ -108,7 +108,6 @@ impl Compiler {
                 } {
                     *size = ArrayType::Fixed(len.try_into().unwrap());
                 };
-            }
             let size_t = ctype.sizeof().map_err(|err| Locatable {
                 data: err.to_string(),
                 location,

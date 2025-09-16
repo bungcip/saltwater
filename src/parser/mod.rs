@@ -228,11 +228,10 @@ pub(crate) fn check_semantics(buf: &str, opt: Opt) -> Program<Vec<Locatable<hir:
             Ok(decl) => hir.push(decl),
             Err(err) => {
                 errs.push_back(err);
-                if let Some(max) = opt.max_errors {
-                    if errs.len() >= max.into() {
+                if let Some(max) = opt.max_errors
+                    && errs.len() >= max.into() {
                         return Program::from_cpp(cpp, Err(errs));
                     }
-                }
             }
         }
     }

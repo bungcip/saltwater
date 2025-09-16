@@ -291,8 +291,7 @@ impl<'a> PreProcessor<'a> {
             data: data @ Token::Id(_),
             ..
         })) = &mut token
-        {
-            if let Token::Id(name) = &data {
+            && let Token::Id(name) = &data {
                 let strings = crate::parser::intern::STRINGS
                     .read()
                     .expect("failed to lock String cache for reading");
@@ -302,7 +301,6 @@ impl<'a> PreProcessor<'a> {
                     *data = Token::Keyword(*keyword);
                 }
             }
-        }
         token
     }
 

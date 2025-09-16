@@ -350,11 +350,10 @@ fn err_exit(err: Error, max_errors: Option<NonZeroUsize>, color: ColorChoice, fi
             for err in &errs {
                 error(&err.data, err.location(), files, color);
             }
-            if let Some(max) = max_errors {
-                if usize::from(max) <= errs.len() {
+            if let Some(max) = max_errors
+                && usize::from(max) <= errs.len() {
                     println!("fatal: too many errors (--max-errors {}), stopping now", max);
                 }
-            }
             let (num_warnings, num_errors) = (get_warnings(), get_errors());
             print_issues(num_warnings, num_errors);
             process::exit(2);
@@ -398,7 +397,7 @@ fn pretty_print<T: std::fmt::Display>(prefix: ANSIString, msg: T, location: Loca
         .expect("start location should be in bounds");
     let buf = format!(
         "{}:{}:{} {}: {}\n",
-        file_db.name(file).to_string(),
+        file_db.name(file),
         start.line.number(),
         start.column.number(),
         prefix,

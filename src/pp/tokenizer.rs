@@ -215,11 +215,9 @@ impl Tokenizer<'_> {
                             maybe_name: Some(name),
                             tokens,
                         } = &part
-                        {
-                            if name == "endif" && tokens.is_empty() {
+                            && name == "endif" && tokens.is_empty() {
                                 break;
                             }
-                        }
 
                         else_.parts.push(part);
                     }
@@ -266,8 +264,8 @@ impl Tokenizer<'_> {
                 tokens.pop();
             }
 
-            if let Some(name) = &maybe_name {
-                if let "if" | "ifdef" | "ifndef" = &name[..] {
+            if let Some(name) = &maybe_name
+                && let "if" | "ifdef" | "ifndef" = &name[..] {
                     let mut cond = vec![];
                     if let "ifdef" | "ifndef" = &name[..] {
                         if name == "ifndef" {
@@ -285,7 +283,6 @@ impl Tokenizer<'_> {
 
                     return Some(GroupPart::IfElse { cond, then, else_ });
                 }
-            }
 
             return Some(GroupPart::Directive { maybe_name, tokens });
         }

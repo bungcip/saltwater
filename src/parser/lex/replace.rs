@@ -170,8 +170,7 @@ pub(crate) fn replace(
         if let Ok(Locatable {
             data: Token::Id(id), ..
         }) = token
-        {
-            if !ids_seen.contains(&id) {
+            && !ids_seen.contains(&id) {
                 match definitions.get(&id) {
                     Some(Definition::Object(replacement_list)) => {
                         ids_seen.insert(id);
@@ -202,7 +201,6 @@ pub(crate) fn replace(
                     None => {}
                 }
             }
-        }
         replacements.push(token);
     }
 

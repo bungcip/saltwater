@@ -550,11 +550,10 @@ impl Iterator for Lexer {
             })
         });
 
-        if self.debug {
-            if let Some(Ok(token)) = &c {
+        if self.debug
+            && let Some(Ok(token)) = &c {
                 println!("token: {}", token.data);
             }
-        }
         c.or_else(|| self.error_handler.pop_front().map(Err))
     }
 }

@@ -962,14 +962,13 @@ impl PureAnalyzer {
     ///
     /// This returns an opaque index to the `Metadata`.
     fn declare(&mut self, mut decl: Variable, init: bool, location: Location) -> Symbol {
-        if decl.id == "main".into() {
-            if let Type::Function(ftype) = &decl.ctype {
+        if decl.id == "main".into()
+            && let Type::Function(ftype) = &decl.ctype {
                 // int main(int)
                 if !ftype.is_main_func_signature() {
                     self.err(SemanticError::IllegalMainSignature, location);
                 }
             }
-        }
         // e.g. extern int i = 1;
         // this is a silly thing to do, but valid: https://stackoverflow.com/a/57900212/7669110
         if decl.storage_class == StorageClass::Extern && !decl.ctype.is_function() && init {

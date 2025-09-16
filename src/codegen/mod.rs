@@ -425,7 +425,7 @@ pub fn link(obj_file: &Path, output: &Path) -> Result<(), std::io::Error> {
             }
         })?;
     if !status.success() {
-        Err(Error::new(ErrorKind::Other, "linking program failed"))
+        Err(Error::other("linking program failed"))
     } else {
         Ok(())
     }
